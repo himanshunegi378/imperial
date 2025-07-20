@@ -2,10 +2,10 @@
 import React from 'react'; // Don't forget to import React
 
 interface NavButtonProps {
-  label: string;
+  label: React.ReactNode;
   icon: React.ReactNode; // Use React.ReactNode for icons
   onClick: () => void;
-  isActive: boolean;
+  isActive?: boolean;
   isDisabled?: boolean;
 }
 
