@@ -47,7 +47,7 @@ const PreviewArea = ({ htmlContent, isLoading, className }: { htmlContent: strin
         <title>Preview</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
       </head>
-      <body class="p-4 bg-white text-gray-900 h-screen flex items-center justify-center">
+      <body class="p-4 bg-white text-gray-900 h-screen flex items-center justify-center flex-col">
         ${htmlContent}
       </body>
     </html>`
