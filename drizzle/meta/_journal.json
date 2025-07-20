@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1752945473124,
+      "tag": "0000_icy_stryfe",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1753015636250,
+      "tag": "0001_faithful_whistler",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1753016312176,
+      "tag": "0002_demonic_quasimodo",
+      "breakpoints": true
+    }
+  ]
+}
