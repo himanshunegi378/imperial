@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { chat } from "./ai.js";
+import { env } from './env.js';
 
 const app = express();
 
@@ -47,6 +48,6 @@ app.post('/chat', async (req, res) => {
     res.json({ message, chatId: _chatId, component, name, });
 })
 
-app.listen(3000, () => {
-    console.log("Server started on port 3000");
+app.listen(env.PORT, () => {
+    console.log(`Server started on port ${env.PORT}`);
 });
