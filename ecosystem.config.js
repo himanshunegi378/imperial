@@ -2,7 +2,7 @@ module.exports = {
   apps: [{
     name: 'imperial-backend',
     script: 'pnpm',
-    args: ['start'],
+    args: ['start']
 
   }],
   watch: false,
