@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import './App.css';
 import type { Message } from './features/Chat/types';
 import { ChatArea } from './features/Chat/Components/ChatArea';
@@ -67,7 +67,7 @@ function App() {
     // 1. Add user message to state & set loading
     const userMessage: Message = { id: Date.now().toString(), sender: 'user', text };
     setMessages(prev => [...prev, userMessage]);
-    const { component, name, message, chatId:newChatId } = await chat({
+    const { component, message, chatId:newChatId } = await chat({
       message: text,
       chatId
     })
