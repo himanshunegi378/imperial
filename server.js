@@ -4,6 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { chat } from "./ai.js";
 import { env } from './env.js';
+import { getAllComponents } from './feat/component/component.repository.js';
 
 const app = express();
 
@@ -46,6 +47,12 @@ app.post('/chat', async (req, res) => {
     })
 
     res.json({ message, chatId: _chatId, component, name, });
+})
+
+app.get('/all-components',async (req, res) => {
+    const sessionId = req.cookies['sessionId'];
+    const components = await getAllComponents(sessionId);
+    res.json({data: components});
 })
 
 app.listen(env.PORT, () => {

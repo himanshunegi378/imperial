@@ -4,8 +4,8 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { z } from "zod";
 import { chatHistory, Components } from "./schema.js";
 import { env } from './env.js';
+import { db } from './db.js';
 
-const db = drizzle('./imperial.db');
 
 const llm = new ChatOpenAI({
     apiKey: env.OPENAI_API_KEY,

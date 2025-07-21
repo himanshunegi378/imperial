@@ -1,10 +1,11 @@
 import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core"
 export const Components = sqliteTable('components', {
   id: integer({mode: 'number'}).primaryKey({autoIncrement: true}),
-  chatId: text().notNull(),
+  chatId: text(),
   userId: text().notNull(),
   name: text().notNull(),
   html: text().notNull(),
+  hideFromLibrary: integer('hideFromLibrary', {mode:"boolean"}).notNull().default(0),
 });
 
 export const chatHistory = sqliteTable('chatHistory', {
@@ -12,4 +13,4 @@ export const chatHistory = sqliteTable('chatHistory', {
   userId: text().notNull(), // It is gonna be session Id of user
   chatId: text().notNull(),
   message: text().notNull(),
-});
+}); 
