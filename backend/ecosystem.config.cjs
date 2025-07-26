@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'imperial-backend',
-    script: 'pnpm',
+    script: 'yarn',
     args: ['start']
 
   }],

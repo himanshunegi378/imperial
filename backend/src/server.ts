@@ -1,10 +1,8 @@
-import 'dotenv/config'
-import express from "express";
-import cors from "cors";
 import cookieParser from "cookie-parser";
-import { chat } from "./ai";
+import cors from "cors";
+import 'dotenv/config';
+import express from "express";
 import { env } from './env';
-import { getAllComponents } from './feat/component/component.repository';
 import { chatRoutes } from './feat/chat/chat.route';
 import { libraryRoutes } from './feat/library/library.route';
 
