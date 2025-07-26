@@ -1,12 +1,11 @@
-import { getRecords } from '../rag/rag.repository';
-import { addComponentsToVectorStore } from '../ai/vector-store.service';
-import { AppError } from '../../core/utils/responseFormatter';
-import { LibraryErrorDefinitions } from './library.error';
+import { and, eq } from 'drizzle-orm';
 import { uiVectorStore } from '../../config/constants';
-import { validateComponents } from './library.validation';
+import { AppError } from '../../core/utils/responseFormatter';
 import { db } from '../../db';
 import { Components } from '../../schema';
-import { eq } from 'drizzle-orm';
+import { hideComponentsForUser } from '../../shared/repository/components.repository';
+import { LibraryErrorDefinitions } from './library.error';
+import { validateComponents } from './library.validation';
 
 /**
  * Get RAG records with pagination
@@ -64,6 +63,12 @@ export const addLibraryComponents = async (components: any[]) => {
 }
 
 export const getUserGeneratedComponents = async (userId: string) => {
-    const components = await db.select().from(Components).where(eq(Components.userId, userId));
+    const components = await db.select().from(Components).where(and(eq(Components.userId, userId), eq(Components.hideFromLibrary, false)));
     return components;
 }
+
+export const hideUserGeneratedComponents = async (userId: string, componentIds: number[]) => {
+    const result = await hideComponentsForUser(userId, componentIds);
+    return result;
+}
+

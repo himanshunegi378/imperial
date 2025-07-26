@@ -92,7 +92,7 @@ export class VectorStore<T extends Record<string, unknown>> {
             // If a cursor (lastId) is provided, fetch records with IDs greater than the cursor
             query = `
             SELECT id, content, metadata
-            FROM uiComponents
+            FROM vectors
             WHERE id > ?
             ORDER BY id ASC
             LIMIT ?;
@@ -102,7 +102,7 @@ export class VectorStore<T extends Record<string, unknown>> {
             // For the first page, just fetch the first 'fetchLimit' records
             query = `
             SELECT id, content, metadata
-            FROM uiComponents
+            FROM vectors
             ORDER BY id ASC
             LIMIT ?;
         `;

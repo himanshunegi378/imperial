@@ -1,8 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { AppError, formatSuccess } from '../../core/utils/responseFormatter';
+import { hideComponentsForUser } from '../../shared/repository/components.repository';
 import { LibraryErrorDefinitions } from './library.error';
 import { addLibraryComponents, getLibraryRecords, getUserGeneratedComponents } from './library.service';
-import { addComponentsSchema, getRagRecordsSchema, getUserGeneratedComponentsSchema } from './library.validation';
+import { addComponentsSchema, deleteUserGeneratedComponentsSchema, getRagRecordsSchema, getUserGeneratedComponentsSchema } from './library.validation';
 
 /**
  * Get RAG records with pagination
@@ -56,7 +57,7 @@ export const addComponentsController = async (req: Request, res: Response, next:
 
 export const getUserGeneratedComponentsController = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const validatedBody = getUserGeneratedComponentsSchema.safeParse({userId: req.cookies['sessionId']});
+        const validatedBody = getUserGeneratedComponentsSchema.safeParse({ userId: req.cookies['sessionId'] });
 
         if (!validatedBody.success) {
             throw new AppError(LibraryErrorDefinitions.INVALID_PAYLOAD, {
@@ -72,4 +73,24 @@ export const getUserGeneratedComponentsController = async (req: Request, res: Re
         next(error);
     }
 };
+
+export const deleteUserGeneratedComponentsController = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const validatedBody = deleteUserGeneratedComponentsSchema.safeParse({ userId: req.cookies['sessionId'], componentIds: req.body.componentIds });
+
+        if (!validatedBody.success) {
+            throw new AppError(LibraryErrorDefinitions.INVALID_PAYLOAD, {
+                errors: validatedBody.error.format()
+            });
+        }
+
+        const { userId, componentIds } = validatedBody.data;
+        const result = await hideComponentsForUser(userId, componentIds);
+
+        res.json(formatSuccess({ success: true }));
+    } catch (error) {
+        next(error);
+    }
+};
+
 

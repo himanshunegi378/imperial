@@ -63,3 +63,8 @@ export const validateComponents = (components: Array<z.infer<typeof componentSch
 export const getUserGeneratedComponentsSchema = z.object({
     userId: z.string()
 });
+
+export const deleteUserGeneratedComponentsSchema = z.object({
+    userId: z.string(),
+    componentIds: z.array(z.number())
+});

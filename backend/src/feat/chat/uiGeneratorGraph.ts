@@ -1,6 +1,6 @@
 import { Annotation, END, MessagesAnnotation, START, StateGraph } from '@langchain/langgraph';
 import { z } from 'zod';
-import { getChatHistory, getComponent, saveComponent, saveMessage } from '../ai/ai.service';
+import { getChatHistory, getComponent, saveComponent, saveMessage } from './chat.repository';
 import { ChatHistory } from './chat.type';
 import { ChatOpenAI } from '@langchain/openai';
 import { env } from '../../env';
@@ -34,10 +34,8 @@ const uiGenerationNode = async (state: typeof graphState.State): Promise<Partial
     } else {
         state.input.chatId = Math.random().toString(36).substring(2, 15);
     }
-
     const similaritySearchWithScoreResults =
         await uiVectorStore.similaritySearchWithScore(state.input.userMessage, 10);
-
     const { html: lastComponent, name: lastComponentName } = await getComponent(state.input.chatId);
 
 
@@ -63,7 +61,6 @@ Your work must adhere to these rules:
 1.  **High-Quality Code:** Write clean, readable, and semantic HTML. Organize Tailwind CSS classes logically.
 2.  **Self-Contained Output:** The generated HTML must be a single, self-contained block. DO NOT include \`<html>\`, \`<head>\`, or \`<body>\` tags unless the request is for a full page layout.
 3.  **No Explanations:** Do not add any conversational text, notes, or explanations in your output. Your response should only be the structured JSON object with the requested fields.`
-
 
     const { component, name, message } = await llm.withStructuredOutput(z.object({
         name: z.string().describe("A concise, descriptive name for the component in PascalCase or Title Case (e.g., 'PrimaryButton', 'UserProfileCard')."),

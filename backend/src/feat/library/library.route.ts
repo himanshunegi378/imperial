@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { addComponentsController, getRagRecordsController, getUserGeneratedComponentsController } from './library.controller';
+import { addComponentsController, deleteUserGeneratedComponentsController, getRagRecordsController, getUserGeneratedComponentsController } from './library.controller';
 
 const router = Router();
 
@@ -11,5 +11,7 @@ router.post('/library/add-to-html-rag', addComponentsController);
 
 // Route for getting user generated components
 router.get('/library/get-user-generated-components', getUserGeneratedComponentsController);
+
+router.delete('/library/delete-user-generated-components', deleteUserGeneratedComponentsController)
 
 export const libraryRoutes = router;
