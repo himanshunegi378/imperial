@@ -96,7 +96,7 @@ export const ChatArea = ({ messages, onSendMessage, isSending, className }: { me
 
   return (
     // Main container uses the base 'soft-white' background.
-    <div className={`flex flex-col bg-soft-white font-sans ${className}`}>
+    <div className={`flex flex-col bg-soft-white font-sans h-screen ${className}`}>
       {/* Chat History */}
       <div className="flex-grow p-4 space-y-4 overflow-y-auto md:p-6">
         {messages.map((msg) => (

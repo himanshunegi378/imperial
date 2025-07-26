@@ -13,6 +13,8 @@ import type { NavItem } from './features/Sidebar/types/NavItem';
 import useSessionId from './api-hooks/useSessionId';
 
 import { PreviewAreaContainer } from './features/library/views/PreviewAreaContainer';
+import { RagRecordsView } from './features/rag/views/RagRecords';
+import { AddRagRecords } from './features/rag/views/AddRagRecords';
 
 function Layout() {
   const location = useLocation();
@@ -37,6 +39,28 @@ function Layout() {
       onClick: () => navigate('/library'),
       isActive: location.pathname === '/library',
     },
+    {
+      id: 'rag',
+      label: (
+        <span className="inline-flex items-center text-base font-semibold">
+          RAG Records
+        </span>
+      ),
+      icon: '📊',
+      onClick: () => navigate('/rag'),
+      isActive: location.pathname === '/rag',
+    },
+    {
+      id: 'add-rag',
+      label: (
+        <span className="inline-flex items-center text-base font-semibold">
+          Add RAG Records
+        </span>
+      ),
+      icon: '➕',
+      onClick: () => navigate('/rag/add'),
+      isActive: location.pathname === '/rag/add',
+    },
   ];
 
   return (
@@ -45,6 +69,8 @@ function Layout() {
       <Routes>
         <Route path="/library" element={<div className="col-span-2 overflow-auto"><PreviewAreaContainer /></div>} />
         <Route path="/create" element={<CreateView />} />
+        <Route path="/rag" element={<div className="col-span-2 overflow-auto"><RagRecordsView /></div>} />
+        <Route path="/rag/add" element={<div className='col-span-2 overflow-auto'><AddRagRecords /></div>} />
         <Route path="*" element={<Navigate to="/create" replace />} />
       </Routes>
     </div>

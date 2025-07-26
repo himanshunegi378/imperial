@@ -1,0 +1,9 @@
+{
+    "ext": "ts,js",
+    "exec": "ts-node --transpileOnly src/server.ts",
+    "ignore": [
+        "node_modules",
+        "dist",
+        "shell"
+    ]
+}

@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "es2018",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": "./src", // Assuming your source code is in a 'src' directory
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true, // Recommended for faster compilation in some cases
+    "forceConsistentCasingInFileNames": true,
+    "allowJs": true, // Allow TypeScript to compile JavaScript files
+    "checkJs": true , // Perform type checking on JavaScript files
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.js" // Include your existing JavaScript files
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "shell"
+  ]
+}
