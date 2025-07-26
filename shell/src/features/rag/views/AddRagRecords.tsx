@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { PreviewAreaItem } from "../external";
 import { ErrorBoundary } from 'react-error-boundary';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import type { ComponentMetadata } from '../types';
 import axiosInstance from '../../../axiosInstance';
