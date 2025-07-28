@@ -1,5 +1,4 @@
 node_modules
 imperial.db*
-langraph-checkpoint.db*
 .env
 dist
