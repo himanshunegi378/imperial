@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChatArea } from '../features/Chat/Components/ChatArea';
 import type { Message } from '../features/Chat/types';
 import { useChat } from '../api-hooks/useChat';
 import { PreviewArea } from '../features/Chat/Components/PreviewArea';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useGetChatHistory } from '../features/Chat/hooks/useGetChatHistory';
 
 /**
  * View responsible for the "Create" route. It encapsulates the chat workflow
@@ -11,11 +13,39 @@ import { PreviewArea } from '../features/Chat/Components/PreviewArea';
 export const CreateView = () => {
   // Chat & preview state management
   const [messages, setMessages] = useState<Message[]>([]);
+  const { chatId: chatIdParam } = useParams();
   const { isPending, mutateAsync: chat } = useChat();
+  const navigate = useNavigate();
   const [htmlContent, setHtmlContent] = useState(
     '<h1>Welcome!</h1><p>Your generated HTML preview will appear here.</p>'
   );
   const [chatId, setChatId] = useState<string | undefined>();
+
+  const { data: chatHistory } = useGetChatHistory(chatIdParam)
+
+  useEffect(()=>{
+    if(!chatIdParam){
+      setMessages([]);
+      setHtmlContent('<h1>Welcome!</h1><p>Your generated HTML preview will appear here.</p>');
+    }
+  },[chatIdParam])
+
+  useEffect(()=>{
+    if(chatHistory){
+      const messages = chatHistory.messages.map((message)=>{
+        const aiMessage: Message = {
+          id: message.id,
+          sender: message.sender,
+          text: message.text,
+        };
+        return aiMessage;
+      })
+      setHtmlContent(chatHistory.component);
+      setMessages(messages);
+      setChatId(chatHistory.chatId);
+    }
+  }, [chatHistory])
+
 
   /**
    * Handler that fires every time the user sends a message from the ChatArea.
@@ -26,7 +56,7 @@ export const CreateView = () => {
     // Push user message optimistically
     const userMessage: Message = {
       id: Date.now().toString(),
-      sender: 'user',
+      sender: 'human',
       text,
     };
     setMessages(prev => [...prev, userMessage]);
@@ -46,6 +76,9 @@ export const CreateView = () => {
     };
     setMessages(prev => [...prev, aiMessage]);
     setChatId(newChatId);
+    if(newChatId !== chatIdParam){
+      navigate(`/chat/${newChatId}`);
+    }
   };
 
   return (

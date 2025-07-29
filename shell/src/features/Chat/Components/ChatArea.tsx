@@ -16,13 +16,13 @@ const SendIcon = () => (
 
 
 const ChatBubble = ({ sender, text }: Omit<Message, 'id'>) => {
-  const isUser = sender === 'user';
+  const isUser = sender === 'human';
 
   return (
     // Animate new bubbles entering the chat for a smoother feel.
     <div className={`flex animate-in fade-in slide-in-from-bottom-4 duration-500 ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`max-w-xl rounded-2xl px-4 py-3 font-sans shadow-soft-float
+        className={`max-w-xl rounded-2xl px-4 py-2 font-sans shadow-soft-float
           ${
             isUser
               // User bubble: A gentle gradient to feel personal and active.
@@ -31,7 +31,7 @@ const ChatBubble = ({ sender, text }: Omit<Message, 'id'>) => {
               : 'bg-white text-dark-gray rounded-bl-lg'
           }`}
       >
-        <p className="leading-relaxed">{text}</p>
+        <p className="leading-snug">{text}</p>
       </div>
     </div>
   );

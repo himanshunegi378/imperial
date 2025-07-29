@@ -3,10 +3,11 @@ import { Annotation, END, MessagesAnnotation, START, StateGraph } from '@langcha
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 import { ChatOpenAI } from '@langchain/openai';
 import { z } from 'zod';
-import { uiVectorStore } from '../../config/constants';
+import { checkpointer, uiVectorStore } from '../../config/constants';
 import { env } from '../../env';
+import { HumanMessage, AIMessage } from '@langchain/core/messages';
+import { graphState, PlanSchema } from './graphState';
 
-const checkpointer = SqliteSaver.fromConnString("langraph-checkpoint.db");
 
 
 const llm = new ChatOpenAI({
@@ -27,34 +28,8 @@ const deepseekLlm = new ChatGroq({
     temperature: 0.1
 })
 
-// Define a schema for our new plan object
-const PlanSchema = z.object({
-    features: z.array(z.string()).describe("A list of key functional elements or components required."),
-    designNotes: z.array(z.string()).describe("A list of stylistic instructions, animations, or design language interpretations (e.g., what '3D' means)."),
-    enhancedPrompt: z.string().describe("A rewritten, detailed prompt for the UI generation model, incorporating the identified features and design notes.")
-});
 
-const graphState = Annotation.Root({
-    input: Annotation<{
-        userId: string,
-        chatId: string,
-        userMessage: string
-    }>,
-    output: Annotation<{
-        name: string,
-        component: string,
-        message: string,
-        chatId: string
-    }>,
-    plan: Annotation<z.infer<typeof PlanSchema>>(),
 
-    validation: Annotation<{
-        isValid: boolean,
-        feedback: string,
-        score: number,
-    }>(),
-    ...MessagesAnnotation.spec
-})
 
 const requirementDeconstructionNode = async (state: typeof graphState.State): Promise<Partial<typeof graphState.State>> => {
     console.log("--- 📝 DECONSTRUCTING USER REQUIREMENT ---");
@@ -92,7 +67,8 @@ You are a senior UX designer and front-end architect. Your goal is to deconstruc
     console.log(`Enhanced Prompt: ${plan.enhancedPrompt}`);
 
     return {
-        plan: plan
+        plan: plan,
+
     };
 }
 
@@ -176,13 +152,14 @@ ${doc.pageContent}`).join('\n')
             `
         }
     ]);
+
     return {
         output: {
             name,
             component,
             message,
             chatId: state.input.chatId
-        }
+        },
     }
 }
 
@@ -270,24 +247,35 @@ You are an expert senior front-end developer tasked with performing a rigorous c
 // This function decides whether to end the graph or loop back for revisions
 const shouldContinue = (state: typeof graphState.State) => {
     if (state.validation?.isValid) {
-        return '__end__';
+        return 'consolidateAiMessages';
     }
     return 'generateComponent';
 };
+
+const aiMessageConsolidatorNode = async (state: typeof graphState.State): Promise<Partial<typeof graphState.State>> => {
+   
+    return {
+        messages: [
+            new HumanMessage(state.input.userMessage),
+            new AIMessage(state.output.message),
+        ]
+    };
+}
 
 const workflow = new StateGraph(graphState)
     .addNode('requirementDeconstructionNode', requirementDeconstructionNode) // Add the new planning node
     .addNode('generateComponent', uiGenerationNode)
     .addNode('validationNode', validationNode)
+    .addNode('consolidateAiMessages', aiMessageConsolidatorNode)
 
     // Define the new workflow sequence
     .addEdge(START, 'requirementDeconstructionNode') // Start with deconstruction
     .addEdge('requirementDeconstructionNode', 'generateComponent') // Then generate
     .addEdge('generateComponent', 'validationNode') // Then validate
-
     .addConditionalEdges('validationNode', shouldContinue, {
-        __end__: END,
+        consolidateAiMessages: 'consolidateAiMessages',
         generateComponent: 'generateComponent',
-    });
+    })
+    .addEdge('consolidateAiMessages', END)
 
 export const ai = workflow.compile({ checkpointer });

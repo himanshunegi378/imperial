@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@plugin 'tailwind-scrollbar';
+
 /* 
 'soft-white': '#F8F8F8',
         'muted-lavender': '#D1C4E9',

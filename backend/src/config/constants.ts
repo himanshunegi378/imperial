@@ -2,6 +2,7 @@ import { VectorStore } from '../feat/vectorStore/vectorStore.service';
 import { z } from 'zod';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { env } from '../env';
+import { SqliteSaver } from '@langchain/langgraph-checkpoint-sqlite';
 
 const codeSchema = z.union([
     z.object({
@@ -31,3 +32,6 @@ export const uiVectorStore = new VectorStore({
         apiKey: env.OPENAI_API_KEY
     }),
 })
+
+
+export const checkpointer = SqliteSaver.fromConnString("langraph-checkpoint.db");

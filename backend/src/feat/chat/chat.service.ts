@@ -1,4 +1,6 @@
-import { getComponent, saveComponent, saveMessage } from "./chat.repository";
+import { checkpointer } from "../../config/constants";
+import { getAllChatIdsAssociateWithUser, saveComponent, saveMessage } from "./chat.repository";
+import { GraphStateType } from "./chat.type";
 import { ai } from "./uiGeneratorGraph"
 
 export class ChatService {
@@ -23,5 +25,19 @@ export class ChatService {
         await saveMessage(userId, chatId, output.message)
 
         return output;
+    }
+
+    getChatHistory = async (chatId: string) => {
+        const graphState = await checkpointer.get({
+            configurable: {
+                thread_id: chatId
+            }
+        })
+        return graphState?.channel_values as GraphStateType;
+    }
+
+    getAllChatIdsAssociateWithUser = async (userId: string) => {
+        const chatIdsWithName = await getAllChatIdsAssociateWithUser(userId);
+        return chatIdsWithName;
     }
 }

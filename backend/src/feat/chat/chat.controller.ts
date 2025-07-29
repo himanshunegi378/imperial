@@ -35,4 +35,36 @@ export class ChatController {
             next(error);
         }
     }
+
+    getChatHistory = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const chatId = req.query.chatId as string;
+            if (!chatId) {
+                throw new AppError(ChatErrorDefinitions.CHAT_ID_REQUIRED, {});
+            }
+            const chatHistory = await this.chatService.getChatHistory(chatId);
+            
+            res.json(formatSuccess({
+                chatId,
+                component: chatHistory?.output.component,
+                name: chatHistory?.output.name,
+                messages: chatHistory?.messages.map((message) => ({
+                    sender: message.getType(),
+                    text: message.content
+                })) ?? []
+            }));
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    getAllChatIdsAssociateWithUser = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const userId = req.cookies['sessionId'];
+            const chatIdList = await this.chatService.getAllChatIdsAssociateWithUser(userId);
+            res.json(formatSuccess(chatIdList));
+        } catch (error) {
+            next(error);
+        }
+    }
 }

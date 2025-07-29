@@ -15,23 +15,25 @@ import useSessionId from './api-hooks/useSessionId';
 import { PreviewAreaContainer } from './features/library/views/PreviewAreaContainer';
 import { RagRecordsView } from './features/rag/views/RagRecords';
 import { AddRagRecords } from './features/rag/views/AddRagRecords';
+import { useGetChatIds } from './features/Chat/hooks/useGetChatIds';
 
 function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { data: chatIds, isLoading } = useGetChatIds();
 
   const navItems: NavItem[] = [
     {
       id: 'create',
       label: 'Create',
       icon: '📝',
-      onClick: () => navigate('/create'),
-      isActive: location.pathname === '/create',
+      onClick: () => navigate('/chat'),
+      isActive: location.pathname === '/chat',
     },
     {
       id: 'library',
       label: (
-        <span className="inline-flex items-center text-base font-semibold">
+        <span className="inline-flex items-center text-base">
           Library
         </span>
       ),
@@ -42,7 +44,7 @@ function Layout() {
     {
       id: 'rag',
       label: (
-        <span className="inline-flex items-center text-base font-semibold">
+        <span className="inline-flex items-center text-base">
           RAG Records
         </span>
       ),
@@ -53,7 +55,7 @@ function Layout() {
     {
       id: 'add-rag',
       label: (
-        <span className="inline-flex items-center text-base font-semibold">
+        <span className="inline-flex items-center text-base">
           Add RAG Records
         </span>
       ),
@@ -65,13 +67,16 @@ function Layout() {
 
   return (
     <div className="grid grid-cols-[256px_1fr_1.5fr] h-screen w-screen overflow-hidden divide-x-3 divide-solid divide-gray-200">
-      <SideBar navItems={navItems} />
+      <SideBar navItems={navItems} chatHistory={chatIds?.map((chatId) => ({ chatId: chatId.chatId, name: chatId.name, onClick: () => { navigate(`/chat/${chatId.chatId}`) } })) ?? []} />
       <Routes>
         <Route path="/library" element={<div className="col-span-2 overflow-auto"><PreviewAreaContainer /></div>} />
-        <Route path="/create" element={<CreateView />} />
+        <Route path="/chat">
+          <Route index element={<CreateView />} />
+          <Route path=":chatId" element={<CreateView />} />
+        </Route>
         <Route path="/rag" element={<div className="col-span-2 overflow-auto"><RagRecordsView /></div>} />
         <Route path="/rag/add" element={<div className='col-span-2 overflow-auto'><AddRagRecords /></div>} />
-        <Route path="*" element={<Navigate to="/create" replace />} />
+        <Route path="*" element={<Navigate to="/chat" replace />} />
       </Routes>
     </div>
   );

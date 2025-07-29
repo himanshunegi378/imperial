@@ -55,7 +55,7 @@ app.use((req, res, next) => {
 // })
 
 app.use(chatRoutes)
-app.use(libraryRoutes)
+app.use(libraryRoutes)  
 
 // RAG records route moved to library feature directory
 

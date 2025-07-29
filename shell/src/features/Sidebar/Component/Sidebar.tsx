@@ -16,19 +16,18 @@ const NavButton = ({ label, icon, onClick, isActive, isDisabled }: NavButtonProp
       disabled={isDisabled}
       // Added `group` for nested hover effects if needed on icon/text
       className={`
-        flex items-center w-full p-2 rounded-md transition-all duration-200 ease-in-out
-        font-sans text-dark-gray text-lg
+        flex items-center w-full p-1.5 rounded-md ease-in-out
+        font-sans text-dark-gray 
         disabled:opacity-50 disabled:cursor-not-allowed
         ${isActive
           ? 'bg-gradient-to-r from-pale-aqua to-muted-lavender text-calming-blue shadow-soft-float border-l-4 border-calming-blue'
           : 'bg-soft-white hover:bg-muted-lavender/50 focus:bg-muted-lavender/70' // Subtler hover
         }
-        focus:outline-none focus:ring-2 focus:ring-calming-blue focus:ring-offset-2 focus:ring-offset-soft-white // Clear focus ring
         active:scale-[0.98] active:bg-pale-aqua active:shadow-inner // Active state for pressed feel
       `}
       aria-current={isActive ? 'page' : undefined} // A11y for active link
     >
-      <span className={`mr-3 text-2xl ${isActive ? 'text-calming-blue' : 'text-dark-gray group-hover:text-calming-blue'}`}>
+      <span className={`mr-3 ${isActive ? 'text-calming-blue' : 'text-dark-gray group-hover:text-calming-blue'}`}>
         {icon}
       </span>
       <span className="truncate">{label}</span>
@@ -42,10 +41,10 @@ export default NavButton; // Export as default for easier import
 import { FiHelpCircle } from 'react-icons/fi'; // Example icons
 import type { NavItem } from '../types/NavItem';
 
-export const SideBar = ({ navItems, className }: { navItems: NavItem[], className?: string }) => {
+export const SideBar = ({ navItems, className, chatHistory }: { navItems: NavItem[], className?: string, chatHistory: { chatId: string, name: string, onClick: (chatId: string) => void }[] }) => {
   return (
     <div className={`
-      bg-soft-white text-dark-gray flex flex-col p-6 shadow-soft-float
+      bg-soft-white text-dark-gray flex flex-col px-4 shadow-soft-float
       border-r-2 border-gray-200
       
       ${className}
@@ -58,8 +57,8 @@ export const SideBar = ({ navItems, className }: { navItems: NavItem[], classNam
       </div>
 
       {/* Navigation */}
-      <nav className="flex-grow">
-        <ul className="space-y-3">
+      <nav className="flex flex-col flex-grow">
+        <ul className="mb-6">
           {navItems.map((item) => (
             <NavButton
               key={item.id}
@@ -71,10 +70,26 @@ export const SideBar = ({ navItems, className }: { navItems: NavItem[], classNam
             />
           ))}
         </ul>
+
+        <div className="mb-2 px-2 text-sm font-medium text-gray-400 select-none">Chats</div>
+        <ul className="grow shrink-1 basis-0 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+          {chatHistory.map((item) => (
+            <li key={item.chatId}>
+              <button
+                type="button"
+                onClick={() => item.onClick(item.chatId)}
+                className="w-full text-left p-1.5 rounded-lg text-gray-800 hover:text-blue-700 hover:bg-blue-100 focus:bg-blue-200 focus:outline-none overflow-hidden text-ellipsis whitespace-nowrap"
+                title={item.name}
+              >
+                {item.name}
+              </button>
+            </li>
+          ))}
+        </ul>
       </nav>
 
       {/* Help Button */}
-      <div className="mt-8"> {/* Add some margin top */}
+      <div className="border-t border-gray-200"> {/* Add some margin top */}
         <button
           onClick={() => window.open('https://github.com/himanshunegi378/imperial', '_blank')}
           className={`
