@@ -20,7 +20,7 @@ import { useGetChatIds } from './features/Chat/hooks/useGetChatIds';
 function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { data: chatIds, isLoading } = useGetChatIds();
+  const { data: chatIds } = useGetChatIds();
 
   const navItems: NavItem[] = [
     {
