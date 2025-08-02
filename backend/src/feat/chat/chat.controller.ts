@@ -67,4 +67,24 @@ export class ChatController {
             next(error);
         }
     }
+
+    deleteChatHistory = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const chatId = req.params.chatId;
+            const userId = req.cookies['sessionId'];
+            
+            if (!chatId) {
+                throw new AppError(ChatErrorDefinitions.CHAT_ID_REQUIRED, {});
+            }
+            
+            const result = await this.chatService.deleteChatHistory(chatId, userId);
+            if(result.success) {
+                res.json(formatSuccess(result));
+            } else {
+                throw new AppError(ChatErrorDefinitions.CHAT_HISTORY_DELETE_FAILED, {});
+            }
+        } catch (error) {
+            next(error);
+        }
+    }
 }

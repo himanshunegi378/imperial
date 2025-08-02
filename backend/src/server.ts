@@ -1,10 +1,15 @@
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import 'dotenv/config';
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { env } from './env';
 import { chatRoutes } from './feat/chat/chat.route';
 import { libraryRoutes } from './feat/library/library.route';
+import { authRoutes } from "./feat/auth/auth.route";
+import { userRoutes } from "./feat/auth/user/user.route";
+import { AppError } from "./core/utils/responseFormatter";
+import { ErrorDefinition } from "./@types/error.types";
+import z from "zod";
 
 
 const app = express();
@@ -54,10 +59,31 @@ app.use((req, res, next) => {
 //     res.json({ message, chatId: _chatId, component, name, });
 // })
 
+app.use(authRoutes)
+app.use(userRoutes)
 app.use(chatRoutes)
 app.use(libraryRoutes)  
 
 // RAG records route moved to library feature directory
+
+
+// middleware to handle error 
+app.use((err: Error | AppError<ErrorDefinition>, req: Request, res: Response) => {
+    
+    if(err instanceof AppError) {
+        res.status(err.errorDef.httpStatus).json(err.format());
+    }else{
+        const error = new AppError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Something went wrong!',
+            httpStatus: 500,
+            detailsSchema: z.object({})
+        });
+        res.status(error.errorDef.httpStatus).json(error.format());
+    }
+
+    
+});
 
 app.listen(env.PORT, () => {
     console.log(`Server started on port ${env.PORT}`);

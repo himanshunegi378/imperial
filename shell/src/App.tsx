@@ -5,6 +5,7 @@ import {
   Navigate,
   useNavigate,
   useLocation,
+  useParams,
 } from 'react-router-dom';
 // Chat types may still be needed in other components but not here.
 import { CreateView } from './views/CreateView';
@@ -16,11 +17,16 @@ import { PreviewAreaContainer } from './features/library/views/PreviewAreaContai
 import { RagRecordsView } from './features/rag/views/RagRecords';
 import { AddRagRecords } from './features/rag/views/AddRagRecords';
 import { useGetChatIds } from './features/Chat/hooks/useGetChatIds';
+import { useDeleteChatHistory } from './features/Chat/hooks/useDeleteChatHistory';
+import { LoginView, SignupView } from './features/auth';
 
 function Layout() {
   const location = useLocation();
+  const { chatId: chatIdParam } = useParams();
   const navigate = useNavigate();
   const { data: chatIds } = useGetChatIds();
+
+  const { mutateAsync: deleteChatId } = useDeleteChatHistory();
 
   const navItems: NavItem[] = [
     {
@@ -65,20 +71,39 @@ function Layout() {
     },
   ];
 
+  const handleDeleteChat = async (chatId: string) => {
+    await deleteChatId({ chatId });
+    if (chatIdParam === chatId) {
+      navigate('/chat');
+    }
+  }
+
+  const sidebar = <SideBar
+    navItems={navItems}
+    chatHistory={chatIds?.map((chatId) => ({ chatId: chatId.chatId, name: chatId.name, onClick: () => { navigate(`/chat/${chatId.chatId}`) } })) ?? []}
+    onDeleteChat={handleDeleteChat}
+  />
+
+  const withSidebar = (element: React.ReactNode) => (
+    <div className="grid grid-cols-[256px_1fr_1.5fr] h-screen w-screen select-none overflow-hidden divide-x-3 divide-solid divide-gray-200">
+      {sidebar}
+      {element}
+    </div>
+  )
+
   return (
-    <div className="grid grid-cols-[256px_1fr_1.5fr] h-screen w-screen overflow-hidden divide-x-3 divide-solid divide-gray-200">
-      <SideBar navItems={navItems} chatHistory={chatIds?.map((chatId) => ({ chatId: chatId.chatId, name: chatId.name, onClick: () => { navigate(`/chat/${chatId.chatId}`) } })) ?? []} />
-      <Routes>
-        <Route path="/library" element={<div className="col-span-2 overflow-auto"><PreviewAreaContainer /></div>} />
+    <Routes>
+        <Route path="/library" element={withSidebar(<div className="col-span-2 overflow-auto"><PreviewAreaContainer /></div>)} />
         <Route path="/chat">
-          <Route index element={<CreateView />} />
-          <Route path=":chatId" element={<CreateView />} />
+          <Route index element={withSidebar(<CreateView />)} />
+          <Route path=":chatId" element={withSidebar(<CreateView />)} />
         </Route>
-        <Route path="/rag" element={<div className="col-span-2 overflow-auto"><RagRecordsView /></div>} />
-        <Route path="/rag/add" element={<div className='col-span-2 overflow-auto'><AddRagRecords /></div>} />
+        <Route path="/rag" element={withSidebar(<div className="col-span-2 overflow-auto"><RagRecordsView /></div>)} />
+        <Route path="/rag/add" element={withSidebar(<div className='col-span-2 overflow-auto'><AddRagRecords /></div>)} />
+        <Route path="/auth/login" element={<div className='col-span-2 overflow-auto'><LoginView /></div>} />
+        <Route path="/auth/signup" element={<div className='col-span-2 overflow-auto'><SignupView /></div>} />
         <Route path="*" element={<Navigate to="/chat" replace />} />
       </Routes>
-    </div>
   );
 }
 

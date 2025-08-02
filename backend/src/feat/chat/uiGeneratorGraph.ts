@@ -89,10 +89,8 @@ The previous attempt was not successful.You MUST regenerate the component to fix
 
 
     const userPrompt = `
-   # INSTRUCTION
-You are an expert React and Tailwind CSS developer.Your task is to to use one or multiple ui components from example and generate a UI mixing them.
-
-            ${revisionInstruction}
+# INSTRUCTION
+You are an expert React and Tailwind CSS developer. Your task is to analyze the user's request and the provided examples to generate a new UI component.
 
 # DETAILED PLAN
 ${state.plan.enhancedPrompt}
@@ -100,63 +98,31 @@ ${state.plan.enhancedPrompt}
 # ORIGINAL USER REQUEST
 ${state.input.userMessage}
 
-# PREVIOUS COMPONENT(If this exists, the user wants to modify it based on the new plan)
-${state.output?.component}
+# PREVIOUS COMPONENT (If available)
+${state.output?.component || 'N/A'}
 
 # EXAMPLES
-Here are ${similaritySearchWithScoreResults.length} relevant UI components retrieved from our design system knowledge base.
+Here are ${similaritySearchWithScoreResults.length} relevant UI components for inspiration:
+${similaritySearchWithScoreResults.map(([doc, score], index) => `## Example ${index + 1}\n${doc.pageContent}`).join('\n')}
 
-            ${similaritySearchWithScoreResults.map(([doc, score], index) => `## Example ${index + 1}
-${doc.pageContent}`).join('\n')
-        }
-
-
-
-# RULES
-1. ** High - Quality Code:** Write clean, readable, and semantic HTML.
-2. ** Self - Contained Output:** The generated HTML must be a single, self - contained block.No html, head, body tags.only html code with tailwind classes
-`
+`;
     const componentSchema = z.object({
         name: z.string().describe("A concise, descriptive name for the component in PascalCase or Title Case (e.g., 'PrimaryButton', 'UserProfileCard')."),
-        component: z.string().describe("The complete, self-contained HTML and Tailwind CSS code for the component. Should not include explanations or markdown fences."),
+        html: z.string().describe("A string containing the complete, self-contained HTML and Tailwind CSS code for the UI component. The code should be ready to be rendered directly in a browser."),
         message: z.string().describe("A brief, friendly confirmation message for the user who requested the component.")
     })
 
-    const systemPrompt = `
-    mix and mash components from provided examples to generate the UI for user. 
-    
-    ## JSON Structure to return
-    - name: A concise, descriptive name for the component in PascalCase or Title Case (e.g., 'PrimaryButton', 'UserProfileCard').
-    - component: The complete, self-contained HTML and Tailwind CSS code for the component. Should not include explanations or markdown fences.
-    - message: A brief, friendly confirmation message for the user who requested the component.
-    `
-    const result = await kim2Llm.invoke([
-        {
-            role: 'system',
-            content: systemPrompt,
-        },
+    const { name, html, message } = await kim2Llm.withStructuredOutput(componentSchema).invoke([
         {
             role: 'user',
             content: userPrompt
         }
     ]);
 
-    const { name, component, message } = await llm.withStructuredOutput(componentSchema).invoke([
-
-        {
-            role: 'user',
-            content: `
-            Convert to JSON
-
-            ${result.content}
-            `
-        }
-    ]);
-
     return {
         output: {
             name,
-            component,
+            component: html,
             message,
             chatId: state.input.chatId
         },
@@ -177,31 +143,27 @@ const validationNode = async (state: typeof graphState.State): Promise<Partial<t
     const validationLlm = deepseekLlm
 
     const validationPrompt = `
-# CONTEXT
-You are an expert senior front - end developer tasked with performing a rigorous code review on an AI - generated UI component.
+    # CONTEXT
+    You are an expert senior front-end developer tasked with performing a rigorous code review on an AI-generated UI component.
+    
+    # ORIGINAL USER REQUEST
+    ${userMessage}
+    
+    # GENERATED HTML COMPONENT
+    ${component}
+    
+    # Evaluation Criteria
+    1.  **Requirement Fulfillment:** Does the code accurately implement the user's request?
+    2.  **Code Quality:** Is the HTML semantic? Are Tailwind CSS classes used effectively?
+    3.  **Accessibility (A11y):** Does it include basic accessibility features?
+    4.  **Correctness:** Is the HTML syntax valid and self-contained?
 
-# ORIGINAL USER REQUEST
-\`\`\`
-${userMessage}
-\`\`\`
+    # TASK
+    Evaluate the component
+    `;
+    
 
-# GENERATED HTML COMPONENT
-\`\`\`html
-${component}
-\`\`\`
-
-# VALIDATION CRITERIA
-Please evaluate the component based on the following criteria:
-1.  **Requirement Fulfillment:** Does the generated code accurately and completely implement the user's request?
-2.  **Code Quality:** Is the HTML semantic and well-structured? Are Tailwind CSS classes used effectively and without redundancy?
-3.  **Accessibility (A11y):** Does the component include basic accessibility features, such as 'alt' attributes for images?
-4.  **Correctness:** Is the HTML syntax valid and self-contained (no <html> or <body> tags)?
-
-# TASK
-The feedback must be clear and provide actionable suggestions if the code is invalid. A score below 8 means the component is not valid.
-`;
-
-    const rawResult = await validationLlm.invoke([
+    const result = await validationLlm.withStructuredOutput(ValidationSchema).invoke([
         {
             role: 'system',
             content: `
@@ -224,10 +186,6 @@ You are an expert senior front-end developer tasked with performing a rigorous c
         }
     ]);
 
-    const result = await llm.withStructuredOutput(ValidationSchema).invoke(`
-        convert to json
-        ${rawResult.content}
-        `)
 
 
     console.log(`--- VALIDATION SCORE: ${result.score}/10 ---`);

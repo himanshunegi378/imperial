@@ -5,6 +5,8 @@ import { useChat } from '../api-hooks/useChat';
 import { PreviewArea } from '../features/Chat/Components/PreviewArea';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGetChatHistory } from '../features/Chat/hooks/useGetChatHistory';
+import { useQueryClient } from '@tanstack/react-query';
+import { useGetChatIds } from '../features/Chat/hooks/useGetChatIds';
 
 /**
  * View responsible for the "Create" route. It encapsulates the chat workflow
@@ -13,6 +15,7 @@ import { useGetChatHistory } from '../features/Chat/hooks/useGetChatHistory';
 export const CreateView = () => {
   // Chat & preview state management
   const [messages, setMessages] = useState<Message[]>([]);
+  const queryClient = useQueryClient();
   const { chatId: chatIdParam } = useParams();
   const { isPending, mutateAsync: chat } = useChat();
   const navigate = useNavigate();
@@ -78,6 +81,9 @@ export const CreateView = () => {
     setChatId(newChatId);
     if(newChatId !== chatIdParam){
       navigate(`/chat/${newChatId}`);
+      queryClient.invalidateQueries({
+        queryKey: useGetChatIds.queryKey
+      })
     }
   };
 

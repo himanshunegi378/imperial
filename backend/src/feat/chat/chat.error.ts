@@ -12,5 +12,11 @@ export const ChatErrorDefinitions = {
         message: 'Chat ID is required',
         httpStatus: 400,
         detailsSchema: z.any()
+    },
+    CHAT_HISTORY_DELETE_FAILED: {
+        code: 'CHAT_HISTORY_DELETE_FAILED',
+        message: 'Failed to delete chat history',
+        httpStatus: 500,
+        detailsSchema: z.any()
     }
 }

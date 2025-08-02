@@ -1,5 +1,5 @@
 import { checkpointer } from "../../config/constants";
-import { getAllChatIdsAssociateWithUser, saveComponent, saveMessage } from "./chat.repository";
+import { createChatHistory, deleteChatHistory, doesChatHistoryExist, getAllChatIdsAssociateWithUser, saveComponent, saveMessage } from "./chat.repository";
 import { GraphStateType } from "./chat.type";
 import { ai } from "./uiGeneratorGraph"
 
@@ -21,8 +21,11 @@ export class ChatService {
                 thread_id: chatId
             }
         })
+
         await saveComponent(userId, chatId, output.component, output.name)
-        await saveMessage(userId, chatId, output.message)
+        if(!await doesChatHistoryExist(chatId)) {
+            await createChatHistory(userId, chatId, output.message)
+        }
 
         return output;
     }
@@ -39,5 +42,9 @@ export class ChatService {
     getAllChatIdsAssociateWithUser = async (userId: string) => {
         const chatIdsWithName = await getAllChatIdsAssociateWithUser(userId);
         return chatIdsWithName;
+    }
+    
+    deleteChatHistory = async (chatId: string, userId: string) => {
+        return await deleteChatHistory(chatId, userId);
     }
 }

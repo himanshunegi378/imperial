@@ -20,10 +20,10 @@ const NavButton = ({ label, icon, onClick, isActive, isDisabled }: NavButtonProp
         font-sans text-dark-gray 
         disabled:opacity-50 disabled:cursor-not-allowed
         ${isActive
-          ? 'bg-gradient-to-r from-pale-aqua to-muted-lavender text-calming-blue shadow-soft-float border-l-4 border-calming-blue'
-          : 'bg-soft-white hover:bg-muted-lavender/50 focus:bg-muted-lavender/70' // Subtler hover
+          ? 'bg-gradient-to-r shadow-inner from-pale-aqua to-muted-lavender text-calming-blue shadow-soft-float -ml-1 border-l-4 border-calming-blue'
+          : 'bg-soft-white hover:bg-muted-lavender/50 focus:bg-muted-lavender/70 -ml-1 border-l-4 border-transparent' // Subtler hover
         }
-        active:scale-[0.98] active:bg-pale-aqua active:shadow-inner // Active state for pressed feel
+         active:shadow-inner // Active state for pressed feel
       `}
       aria-current={isActive ? 'page' : undefined} // A11y for active link
     >
@@ -39,9 +39,11 @@ export default NavButton; // Export as default for easier import
 
 // SideBar.tsx
 import { FiHelpCircle } from 'react-icons/fi'; // Example icons
+import { FiMoreVertical, FiTrash2 } from 'react-icons/fi';
+import { DropdownMenu } from '../../../shared/components/DropdownMenu';
 import type { NavItem } from '../types/NavItem';
 
-export const SideBar = ({ navItems, className, chatHistory }: { navItems: NavItem[], className?: string, chatHistory: { chatId: string, name: string, onClick: (chatId: string) => void }[] }) => {
+export const SideBar = ({ navItems, className, chatHistory, onDeleteChat }: { navItems: NavItem[], className?: string, chatHistory: { chatId: string, name: string, onClick: (chatId: string) => void }[], onDeleteChat?: (chatId: string) => void }) => {
   return (
     <div className={`
       bg-soft-white text-dark-gray flex flex-col px-4 shadow-soft-float
@@ -73,16 +75,33 @@ export const SideBar = ({ navItems, className, chatHistory }: { navItems: NavIte
 
         <div className="mb-2 px-2 text-sm font-medium text-gray-400 select-none">Chats</div>
         <ul className="grow shrink-1 basis-0 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-          {chatHistory.map((item) => (
-            <li key={item.chatId}>
-              <button
-                type="button"
+          {chatHistory.map((item, index) => (
+            <li key={item.chatId + index} className="relative group">
+              <div 
                 onClick={() => item.onClick(item.chatId)}
-                className="w-full text-left p-1.5 rounded-lg text-gray-800 hover:text-blue-700 hover:bg-blue-100 focus:bg-blue-200 focus:outline-none overflow-hidden text-ellipsis whitespace-nowrap"
-                title={item.name}
+                className="flex items-center justify-between p-1.5 rounded-lg text-gray-800 hover:text-blue-700 hover:bg-blue-100 focus:bg-blue-200 focus:outline-none cursor-pointer"
               >
-                {item.name}
-              </button>
+                <span
+                  className="flex-grow text-left overflow-hidden text-ellipsis whitespace-nowrap"
+                  title={item.name}
+                >
+                  {item.name}
+                </span>
+                <div className="">
+                  <DropdownMenu 
+                    trigger={<FiMoreVertical className="text-gray-500 group-hover:text-blue-700 " />}
+                    align="right"
+                    items={[
+                      {
+                        label: 'Delete',
+                        icon: <FiTrash2 className="text-red-500" />,
+                        onClick: () => onDeleteChat && onDeleteChat(item.chatId),
+                        className: 'text-red-500 hover:text-red-700'
+                      }
+                    ]}
+                  />
+                </div>
+              </div>
             </li>
           ))}
         </ul>
