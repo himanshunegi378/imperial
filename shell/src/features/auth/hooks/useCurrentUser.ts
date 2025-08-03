@@ -3,6 +3,7 @@ import { apiRequest } from "../../../shared/utils/apiReuest";
 import axiosInstance from "../../../axiosInstance";
 import type { User } from "../types";
 import { getToken } from "../utils/tokenStorage";
+import { isSuccessResponse } from "../../../shared/types/response.types";
 
 export const useCurrentUser = () => {
   return useQuery<User | null>({
@@ -14,10 +15,12 @@ export const useCurrentUser = () => {
         return null;
       }
       
-      return apiRequest<User>(
-        () => axiosInstance.get("/api/auth/user"),
+      const response = await apiRequest<User>(
+        () => axiosInstance.get("/api/user/profile"),
         "Failed to fetch user information"
       );
+      
+      return isSuccessResponse(response) ? response.data : null;
     },
     // Don't refetch on window focus if no token exists
     enabled: !!getToken(),

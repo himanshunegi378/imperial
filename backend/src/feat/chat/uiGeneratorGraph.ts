@@ -1,7 +1,5 @@
 import { ChatGroq } from '@langchain/groq';
-import { Annotation, END, MessagesAnnotation, START, StateGraph } from '@langchain/langgraph';
-import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
-import { ChatOpenAI } from '@langchain/openai';
+import { END, START, StateGraph } from '@langchain/langgraph';
 import { z } from 'zod';
 import { checkpointer, uiVectorStore } from '../../config/constants';
 import { env } from '../../env';
@@ -10,11 +8,6 @@ import { graphState, PlanSchema } from './graphState';
 
 
 
-const llm = new ChatOpenAI({
-    apiKey: env.OPENAI_API_KEY,
-    model: 'gpt-4o-mini',
-    temperature: 0
-})
 
 const kim2Llm = new ChatGroq({
     apiKey: env.GROQ_API_KEY,
@@ -197,7 +190,7 @@ You are an expert senior front-end developer tasked with performing a rigorous c
 
     // Return the validation result to be merged into the state
     return {
-        validation: result
+        validation: {...result, feedback: (state.validation?.feedback || '').concat('\n', result.feedback)}
     };
 }
 

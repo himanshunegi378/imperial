@@ -9,6 +9,7 @@ interface FormInputProps {
   onBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
   error?: string;
   placeholder?: string;
+  autofocus?: boolean;
 }
 
 export const FormInput: React.FC<FormInputProps> = forwardRef<HTMLInputElement, FormInputProps>(({
@@ -20,6 +21,7 @@ export const FormInput: React.FC<FormInputProps> = forwardRef<HTMLInputElement, 
   onBlur,
   error,
   placeholder,
+  autofocus,
 }, ref) => {
   return (
     <div className="mb-4">
@@ -35,6 +37,8 @@ export const FormInput: React.FC<FormInputProps> = forwardRef<HTMLInputElement, 
         onChange={onChange}
         onBlur={onBlur}
         placeholder={placeholder}
+        autoFocus={autofocus}
+        
         className={`
           w-full rounded-lg border px-4 py-2 font-sans shadow-soft-float
           focus:outline-none focus:ring-2 focus:ring-calming-blue

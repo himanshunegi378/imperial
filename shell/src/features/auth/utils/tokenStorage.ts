@@ -1,8 +1,8 @@
 /**
  * Utility functions for handling token storage in localStorage
  */
-
 const TOKEN_KEY = 'auth_token';
+
 
 /**
  * Save token to localStorage

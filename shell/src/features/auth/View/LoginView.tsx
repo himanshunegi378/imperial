@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { useLogin } from '../hooks/useLogin';
 import { loginSchema } from '../schemas';
 import type { LoginFormData } from '../schemas';
 import { FormInput } from '../components/FormInput';
+import { useAuth } from '../useAuth';
 
 export const LoginView: React.FC = () => {
   const {
@@ -15,20 +16,19 @@ export const LoginView: React.FC = () => {
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      email: 'test@gmail.com',
+      password: '123465789',
     },
   });
   
   const navigate = useNavigate();
-  const { mutate: login, isPending, isError, error } = useLogin();
+  const {login,error} = useAuth();
+  const [isPending, startTransition] = useTransition();
 
   const onSubmit = (data: LoginFormData) => {
-    login(data, {
-      onSuccess: () => {
-        // Redirect to home page or dashboard after successful login
-        navigate('/');
-      },
+    startTransition(async () => {
+      await login(data.email, data.password);
+      navigate('/chat');
     });
   };
 
@@ -37,7 +37,7 @@ export const LoginView: React.FC = () => {
       <div className="w-full max-w-md rounded-xl border border-muted-lavender/50 bg-white p-8 shadow-soft-float">
         <h2 className="text-2xl font-bold text-dark-gray mb-6 text-center">Login to Imperial Shell</h2>
         
-        {isError && (
+        {error && (
           <div className="mb-4 rounded-lg bg-red-100 p-3 text-red-700" role="alert">
             {error?.message || 'An error occurred during login'}
           </div>
@@ -46,6 +46,7 @@ export const LoginView: React.FC = () => {
         <form onSubmit={handleSubmit(onSubmit)}>
           <FormInput
             label="Email"
+            autofocus={true}
             type="email"
             placeholder="Enter your email"
             error={errors.email?.message}

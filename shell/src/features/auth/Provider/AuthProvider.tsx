@@ -8,7 +8,6 @@ import { useSignup } from '../hooks/useSignup';
 import { useRefreshToken } from '../hooks/useRefreshToken';
 import { getToken, saveToken, removeToken } from '../utils/tokenStorage';
 import { decodeToken, getTokenExpiration } from '../utils/tokenDecoder';
-import { setupAuthInterceptors } from '../utils/authInterceptor';
 
 // Auth context type
 interface AuthContextType {
@@ -54,7 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Set up auth interceptors on mount
   useEffect(() => {
-    setupAuthInterceptors();
+    
     
     // Initialize auth state from token if exists
     const token = getToken();

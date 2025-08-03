@@ -23,27 +23,7 @@ app.use(express.json({
 }));
 app.use(cookieParser());
 
-app.get('/create-session', (req, res) => {
-    // get session id from cookies
-    const sessionId = req.cookies['sessionId'];
-    if (sessionId) {
-        res.json({ sessionId });
-    } else {
-        // create session id for infinite session
-        const sessionId = Math.random().toString(36).substring(2, 15);
-        const maxAge400Days = 400 * 24 * 60 * 60 * 1000; // 400 days in milliseconds
-        res.cookie('sessionId', sessionId, { maxAge: maxAge400Days });
-        res.json({ sessionId });
-    }
-})
-
-app.use((req, res, next) => {
-    const sessionId = req.cookies['sessionId'];
-    if (!sessionId) {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
-    next();
-})
+// Session endpoints and middleware removed as part of session-to-auth migration
 
 // Library routes moved to library feature directory
 
@@ -68,8 +48,7 @@ app.use(libraryRoutes)
 
 
 // middleware to handle error 
-app.use((err: Error | AppError<ErrorDefinition>, req: Request, res: Response) => {
-    
+app.use((err: Error | AppError<ErrorDefinition>, req: Request, res: Response, next: NextFunction) => {
     if(err instanceof AppError) {
         res.status(err.errorDef.httpStatus).json(err.format());
     }else{

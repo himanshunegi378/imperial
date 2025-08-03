@@ -57,7 +57,7 @@ export const addComponentsController = async (req: Request, res: Response, next:
 
 export const getUserGeneratedComponentsController = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const validatedBody = getUserGeneratedComponentsSchema.safeParse({ userId: req.cookies['sessionId'] });
+        const validatedBody = getUserGeneratedComponentsSchema.safeParse({ userId: req.user?.userId.toString() || '' });
 
         if (!validatedBody.success) {
             throw new AppError(LibraryErrorDefinitions.INVALID_PAYLOAD, {
@@ -76,7 +76,7 @@ export const getUserGeneratedComponentsController = async (req: Request, res: Re
 
 export const deleteUserGeneratedComponentsController = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const validatedBody = deleteUserGeneratedComponentsSchema.safeParse({ userId: req.cookies['sessionId'], componentIds: req.body.componentIds });
+        const validatedBody = deleteUserGeneratedComponentsSchema.safeParse({ userId: req.user?.userId.toString() || '', componentIds: req.body.componentIds });
 
         if (!validatedBody.success) {
             throw new AppError(LibraryErrorDefinitions.INVALID_PAYLOAD, {

@@ -5,17 +5,20 @@ import { type ApiResponse, isSuccessResponse, isErrorResponse } from "../types/r
 export async function apiRequest<T>(
   requestFn: () => Promise<{ data: ApiResponse<T> }>,
   errorMessage: string
-): Promise<T> {
+): Promise<ApiResponse<T>> {
+  let result: ApiResponse<T>;
   try {
     const response = await requestFn();
     if (!isSuccessResponse(response.data)) {
       throw new Error(response.data.error.message);
     }
-    return response.data.data;
+    result = response.data;
+    return result;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
       if (isErrorResponse(error.response.data)) {
-        throw new Error(error.response.data.error.message);
+        result = error.response.data;
+        return result;
       }
     }
     console.log(error);

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import type { ComponentMetadata } from '../types';
 import axiosInstance from '../../../axiosInstance';
 import { apiRequest } from '../../../shared/utils/apiReuest';
+import { isSuccessResponse } from '../../../shared/types/response.types';
 
 export const AddRagRecords = () => {
   const navigate = useNavigate();
@@ -69,14 +70,20 @@ export const AddRagRecords = () => {
 
     setIsLoading(true);
     try {
-      const response = await apiRequest<{ count: number, success: boolean }>(() => axiosInstance.post('/library/add-to-html-rag', { components }),
-        'library/add-to-html-rag error');
+      const response = await apiRequest<{ count: number, success: boolean }>(
+        () => axiosInstance.post('/library/add-to-html-rag', { components }),
+        'library/add-to-html-rag error'
+      );
       
-      showToast({
-        title: 'Success',
-        description: `Added ${response.count} components to the vector store`,
-        status: 'success'
-      });
+      if (isSuccessResponse(response)) {
+        showToast({
+          title: 'Success',
+          description: `Added ${response.data.count} components to the vector store`,
+          status: 'success'
+        });
+      } else {
+        throw new Error(response.error.message || 'Failed to add components to vector store');
+      }
       
       // Clear the form after successful submission
       setComponents([]);

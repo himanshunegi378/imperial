@@ -3,6 +3,8 @@ import { getToken, saveToken, removeToken } from "./tokenStorage";
 import { apiRequest } from "../../../shared/utils/apiReuest";
 import type { AuthResponse } from "../types";
 import { createBrowserHistory } from "history";
+import { isErrorResponse, isSuccessResponse } from "../../../shared/types/response.types";
+import axios from "axios";
 // Only used for type declarations - no values imported
 
 // Extend Axios request config types to include our custom properties
@@ -36,10 +38,17 @@ let pendingRequests: Array<{
  */
 async function refreshAuthToken(): Promise<string> {
   try {
-    const response = await apiRequest<AuthResponse>(
-      () => axiosInstance.post("/api/auth/refresh", {}, { skipAuthRefresh: true }),
+    const apiResponse = await apiRequest<AuthResponse>(
+      () => axios.post("/api/auth/refresh", {}, { skipAuthRefresh: true, baseURL: import.meta.env.VITE_API_URL }),
       "Token refresh failed"
     );
+    
+    if (isErrorResponse(apiResponse)) {
+      const {  success, error:{code}} = apiResponse
+      throw new Error(apiResponse.error.message || "Token refresh failed");
+    }
+    
+    const response = apiResponse.data;
     
     // Save the new token
     if (response.token) {
@@ -56,7 +65,7 @@ async function refreshAuthToken(): Promise<string> {
 
 /**
  * Process all pending requests after token refresh
- */
+*/
 function processQueue(error: Error | null, token: string | null = null): void {
   pendingRequests.forEach(({ resolve, reject, config }) => {
     if (error) {
@@ -76,11 +85,11 @@ function processQueue(error: Error | null, token: string | null = null): void {
  * Set up axios interceptors to automatically add authentication tokens to requests
  * and handle token refresh on 401 responses
  */
-export const setupAuthInterceptors = () => {
   // Request interceptor
   axiosInstance.interceptors.request.use(
     (config) => {
       // Skip adding token for refresh token requests
+
       if (config.skipAuthRefresh) {
         return config;
       }
@@ -105,7 +114,6 @@ export const setupAuthInterceptors = () => {
     (response) => response,
     async (error) => {
       const originalRequest = error.config;
-      
       // Handle 401 responses except for login, signup, and refresh token endpoints
       if (error.response && 
           error.response.status === 401 && 
@@ -151,8 +159,8 @@ export const setupAuthInterceptors = () => {
           removeToken();
           
           // Redirect to login page
-          if (window.location.pathname !== '/login') {
-            history.push('/login', { from: window.location.pathname });
+          if (window.location.pathname !== '/auth/login') {
+            history.push('/auth/login', { from: window.location.pathname });
             window.location.reload();
           }
           
@@ -167,7 +175,6 @@ export const setupAuthInterceptors = () => {
       return Promise.reject(error);
     }
   );
-};
 
 /**
  * Clear all interceptors

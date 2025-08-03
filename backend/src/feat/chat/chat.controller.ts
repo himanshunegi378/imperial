@@ -21,7 +21,7 @@ export class ChatController {
             }
             const { userMessage, chatId } = validatedBody.data;
             const { component, name, message, chatId: _chatId } = await this.chatService.chat({
-                userId: req.cookies['sessionId'],
+                userId: req.user?.userId.toString() || '',  // Using empty string as fallback for type safety
                 chatId,
                 userMessage
             })
@@ -60,7 +60,7 @@ export class ChatController {
 
     getAllChatIdsAssociateWithUser = async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const userId = req.cookies['sessionId'];
+            const userId = req.user?.userId.toString() || '';  // Using empty string as fallback for type safety
             const chatIdList = await this.chatService.getAllChatIdsAssociateWithUser(userId);
             res.json(formatSuccess(chatIdList));
         } catch (error) {
@@ -71,7 +71,7 @@ export class ChatController {
     deleteChatHistory = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const chatId = req.params.chatId;
-            const userId = req.cookies['sessionId'];
+            const userId = req.user?.userId.toString() || '';  // Using empty string as fallback for type safety
             
             if (!chatId) {
                 throw new AppError(ChatErrorDefinitions.CHAT_ID_REQUIRED, {});
