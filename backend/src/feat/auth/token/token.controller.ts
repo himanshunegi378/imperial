@@ -46,8 +46,6 @@ export class TokenController {
    */
   refreshToken = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Validate request body (empty schema as token comes from cookie)
-      refreshTokenSchema.parse(req.body);
       
       // Get refresh token from cookie
       const refreshToken = req.cookies[this.REFRESH_TOKEN_COOKIE_NAME];

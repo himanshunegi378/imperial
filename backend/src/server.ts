@@ -58,6 +58,7 @@ app.use((err: Error | AppError<ErrorDefinition>, req: Request, res: Response, ne
             httpStatus: 500,
             detailsSchema: z.object({})
         });
+        console.error(err)
         res.status(error.errorDef.httpStatus).json(error.format());
     }
 

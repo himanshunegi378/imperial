@@ -84,7 +84,6 @@ The previous attempt was not successful.You MUST regenerate the component to fix
     const userPrompt = `
 # INSTRUCTION
 You are an expert React and Tailwind CSS developer. Your task is to analyze the user's request and the provided examples to generate a new UI component.
-
 # DETAILED PLAN
 ${state.plan.enhancedPrompt}
 
@@ -106,6 +105,14 @@ ${similaritySearchWithScoreResults.map(([doc, score], index) => `## Example ${in
     })
 
     const { name, html, message } = await kim2Llm.withStructuredOutput(componentSchema).invoke([
+        {
+            role: 'system',
+            content: `
+             # Rule
+             1. Response with a valid JSON object
+             2. Do not include any additional text or explanation start with { and end with }
+           `
+        },
         {
             role: 'user',
             content: userPrompt
@@ -164,6 +171,11 @@ const validationNode = async (state: typeof graphState.State): Promise<Partial<t
 You are an expert senior front-end developer tasked with performing a rigorous code review on an AI-generated UI component.
 
            
+           ## Rule
+           1. Response with a valid JSON object
+           2. Do not include any additional text or explanation start with { and end with }
+
+
            ## JSON Structure to return
            {
             isValid: boolean,

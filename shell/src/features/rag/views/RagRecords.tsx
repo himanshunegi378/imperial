@@ -2,30 +2,12 @@ import { PreviewAreaItem } from "../external";
 import { useRagFetch } from "../hooks/useRagFetch"
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
+import { RenderMetadata } from '../components/RenderMetadata';
 
 export const RagRecordsView = () => {
     const navigate = useNavigate();
     const {data, fetchNextPage, fetchPreviousPage, hasNextPage, isFetchingNextPage, isFetchingPreviousPage, hasPreviousPage} = useRagFetch();
     
-    const renderMetadata = (metadata: Record<string, any>, level: number = 0): React.ReactNode => {
-        return Object.entries(metadata).map(([key, value], index) => {
-            const isObject = value !== null && typeof value === 'object';
-            
-            return (
-                <div key={`${key}-${index}`} className="mb-2" style={{ paddingLeft: `${level * 12}px` }}>
-                    <span className="font-semibold">{key}:</span>{' '}
-                    {!isObject ? (
-                        <span>{String(value)}</span>
-                    ) : (
-                        <div className="ml-4 mt-1 pl-2 border-l-2 border-gray-300">
-                            {renderMetadata(value, level + 1)}
-                        </div>
-                    )}
-                </div>
-            );
-        });
-    };
-
     return (
         <div className="w-full flex flex-col h-full overflow-hidden bg-white rounded-lg shadow">
             <div className="flex justify-between items-center p-4 border-b border-gray-200">
@@ -56,8 +38,8 @@ export const RagRecordsView = () => {
                                     key={`${pageIndex}-${recordIndex}`} 
                                     className={`h-16 ${recordIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                                 >
-                                    <td className="px-6 py-4 align-top">
-                                        {renderMetadata(record.metadata)}
+                                    <td className="px-6 py-4 align-top max-w-lg">
+                                        <RenderMetadata metadata={record.metadata} />
                                     </td>
                                     <td className="px-6 py-4 align-top">
                                         <ErrorBoundary fallback={<div>Something went wrong</div>} >

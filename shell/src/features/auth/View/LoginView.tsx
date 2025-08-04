@@ -1,8 +1,7 @@
-import React, { useTransition } from 'react';
+import React, { useTransition, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
-import { useLogin } from '../hooks/useLogin';
 import { loginSchema } from '../schemas';
 import type { LoginFormData } from '../schemas';
 import { FormInput } from '../components/FormInput';
@@ -17,19 +16,31 @@ export const LoginView: React.FC = () => {
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: 'test@gmail.com',
-      password: '123465789',
+      password: '123456789a',
     },
   });
   
   const navigate = useNavigate();
-  const {login,error} = useAuth();
+  const { login } = useAuth();
   const [isPending, startTransition] = useTransition();
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const onSubmit = (data: LoginFormData) => {
+    setLocalError(null); // Clear previous error
     startTransition(async () => {
-      await login(data.email, data.password);
-      navigate('/chat');
+      try {
+        await login(data.email, data.password);
+        navigate('/chat');
+      } catch (err: any) {
+        // Set local error message
+        setLocalError(err?.message || 'Login failed. Please try again.');
+      }
     });
+  };
+
+  // Clear error on input change
+  const handleInputChange = () => {
+    if (localError) setLocalError(null);
   };
 
   return (
@@ -37,29 +48,47 @@ export const LoginView: React.FC = () => {
       <div className="w-full max-w-md rounded-xl border border-muted-lavender/50 bg-white p-8 shadow-soft-float">
         <h2 className="text-2xl font-bold text-dark-gray mb-6 text-center">Login to Imperial Shell</h2>
         
-        {error && (
+        {localError && (
           <div className="mb-4 rounded-lg bg-red-100 p-3 text-red-700" role="alert">
-            {error?.message || 'An error occurred during login'}
+            {localError}
           </div>
         )}
         
         <form onSubmit={handleSubmit(onSubmit)}>
-          <FormInput
-            label="Email"
-            autofocus={true}
-            type="email"
-            placeholder="Enter your email"
-            error={errors.email?.message}
-            {...register('email')}
-          />
+          {(() => {
+            const { onChange, ...emailProps } = register('email');
+            return (
+              <FormInput
+                label="Email"
+                autofocus={true}
+                type="email"
+                placeholder="Enter your email"
+                error={errors.email?.message}
+                onChange={e => {
+                  handleInputChange();
+                  onChange(e);
+                }}
+                {...emailProps}
+              />
+            );
+          })()}
           
-          <FormInput
-            label="Password"
-            type="password"
-            placeholder="Enter your password"
-            error={errors.password?.message}
-            {...register('password')}
-          />
+          {(() => {
+            const { onChange, ...passwordProps } = register('password');
+            return (
+              <FormInput
+                label="Password"
+                type="password"
+                placeholder="Enter your password"
+                error={errors.password?.message}
+                onChange={e => {
+                  handleInputChange();
+                  onChange(e);
+                }}
+                {...passwordProps}
+              />
+            );
+          })()}
           
           <button
             type="submit"

@@ -30,6 +30,7 @@ export const CreateView = () => {
     if(!chatIdParam){
       setMessages([]);
       setHtmlContent('<h1>Welcome!</h1><p>Your generated HTML preview will appear here.</p>');
+      setChatId(undefined);
     }
   },[chatIdParam])
 

@@ -38,12 +38,25 @@ const NavButton = ({ label, icon, onClick, isActive, isDisabled }: NavButtonProp
 export default NavButton; // Export as default for easier import
 
 // SideBar.tsx
-import { FiHelpCircle } from 'react-icons/fi'; // Example icons
-import { FiMoreVertical, FiTrash2 } from 'react-icons/fi';
+
+import { FiMoreVertical, FiTrash2, FiLogOut } from 'react-icons/fi';
 import { DropdownMenu } from '../../../shared/components/DropdownMenu';
 import type { NavItem } from '../types/NavItem';
+import { useCurrentUser } from '../../auth/hooks/useCurrentUser';
+import { useAuth } from '../../auth/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 export const SideBar = ({ navItems, className, chatHistory, onDeleteChat }: { navItems: NavItem[], className?: string, chatHistory: { chatId: string, name: string, onClick: (chatId: string) => void }[], onDeleteChat?: (chatId: string) => void }) => {
+  const navigate = useNavigate();
+  const { data: user } = useCurrentUser();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout().then(() => {
+      navigate('/login', { replace: true });
+    });
+  };
+
   return (
     <div className={`
       bg-soft-white text-dark-gray flex flex-col px-4 shadow-soft-float
@@ -107,21 +120,35 @@ export const SideBar = ({ navItems, className, chatHistory, onDeleteChat }: { na
         </ul>
       </nav>
 
-      {/* Help Button */}
-      <div className="border-t border-gray-200"> {/* Add some margin top */}
-        <button
-          onClick={() => window.open('https://github.com/himanshunegi378/imperial', '_blank')}
-          className={`
-            w-full py-3 text-center text-light-gray flex items-center justify-center rounded-md
-            transition-all duration-200 ease-in-out
-            hover:bg-muted-lavender/50 hover:text-calming-blue
-            focus:outline-none focus:ring-2 focus:ring-calming-blue focus:ring-offset-2 focus:ring-offset-soft-white
-            active:scale-[0.98]
-          `}
-        >
-          <FiHelpCircle className="mr-2 text-xl" /> {/* Example help icon */}
-          <span className="font-medium">Help & Support</span>
-        </button>
+      {/* Account */}
+      <div className="border-t border-gray-200 py-2">
+        <DropdownMenu
+          align="right"
+          className='w-full'
+          trigger={
+            <button
+              className="
+                w-full py-2 px-2 flex items-center rounded-md
+                transition-all duration-200 ease-in-out
+                hover:bg-muted-lavender/50 focus:bg-muted-lavender/70
+                focus:outline-none
+              "
+            >
+              <div className="h-8 w-8 flex items-center justify-center rounded-full bg-calming-blue text-white uppercase mr-3">
+                {(user?.email?.charAt(0) || '?')}
+              </div>
+              <span className="truncate text-left flex-1">{user?.email || 'Account'}</span>
+            </button>
+          }
+          items={[
+            {
+              label: 'Logout',
+              icon: <FiLogOut className="text-red-500" />,
+              onClick: handleLogout,
+              className: 'text-red-500 hover:text-red-700',
+            },
+          ]}
+        />
       </div>
     </div>
   );

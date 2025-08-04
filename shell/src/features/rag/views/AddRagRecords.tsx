@@ -6,6 +6,8 @@ import type { ComponentMetadata } from '../types';
 import axiosInstance from '../../../axiosInstance';
 import { apiRequest } from '../../../shared/utils/apiReuest';
 import { isSuccessResponse } from '../../../shared/types/response.types';
+import { componentsArraySchema, formatZodErrors } from '../schemas';
+import { RenderMetadata } from '../components/RenderMetadata';
 
 export const AddRagRecords = () => {
   const navigate = useNavigate();
@@ -13,21 +15,21 @@ export const AddRagRecords = () => {
   const [components, setComponents] = useState<ComponentMetadata[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   // Custom toast function
   const showToast = useCallback(({ title, description, status = 'info' }: { title: string; description: string; status?: 'success' | 'error' | 'info' | 'warning' }) => {
     // This is a simple toast implementation. You might want to use a proper toast library like react-hot-toast
     const toast = document.createElement('div');
-    toast.className = `fixed top-4 right-4 p-4 rounded-md shadow-lg ${
-      status === 'success' ? 'bg-green-500' :
-      status === 'error' ? 'bg-red-500' :
-      status === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-    } text-white max-w-md z-50`;
-    
+    toast.className = `fixed top-4 right-4 p-4 rounded-md shadow-lg ${status === 'success' ? 'bg-green-500' :
+        status === 'error' ? 'bg-red-500' :
+          status === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+      } text-white max-w-md z-50`;
+
     toast.innerHTML = `
       <h3 class="font-bold">${title}</h3>
       <p class="text-sm">${description}</p>
     `;
-    
+
     document.body.appendChild(toast);
     setTimeout(() => {
       toast.remove();
@@ -37,14 +39,28 @@ export const AddRagRecords = () => {
   const parseJsonInput = useCallback(() => {
     try {
       setError(null);
+      setValidationErrors([]);
+
       if (!jsonInput.trim()) {
         setComponents([]);
         return;
       }
-      
+
+      // First parse the JSON
       const parsed = JSON.parse(jsonInput);
       const componentsArray = Array.isArray(parsed) ? parsed : [parsed];
-      setComponents(componentsArray);
+
+      // Then validate with Zod schema
+      const validationResult = componentsArraySchema.safeParse(componentsArray);
+
+      if (validationResult.success) {
+        setComponents(validationResult.data);
+      } else {
+        // Format and display validation errors
+        const formattedErrors = formatZodErrors(validationResult.error);
+        setValidationErrors(formattedErrors.split('\n'));
+        console.error('Validation errors:', validationResult.error);
+      }
     } catch (err) {
       setError('Invalid JSON format');
       console.error('Error parsing JSON:', err);
@@ -68,13 +84,22 @@ export const AddRagRecords = () => {
       return;
     }
 
+    if (validationErrors.length > 0) {
+      showToast({
+        title: 'Validation errors',
+        description: 'Please fix all validation errors before submitting',
+        status: 'error'
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await apiRequest<{ count: number, success: boolean }>(
         () => axiosInstance.post('/library/add-to-html-rag', { components }),
         'library/add-to-html-rag error'
       );
-      
+
       if (isSuccessResponse(response)) {
         showToast({
           title: 'Success',
@@ -84,7 +109,7 @@ export const AddRagRecords = () => {
       } else {
         throw new Error(response.error.message || 'Failed to add components to vector store');
       }
-      
+
       // Clear the form after successful submission
       setComponents([]);
       setJsonInput('');
@@ -100,27 +125,7 @@ export const AddRagRecords = () => {
     }
   };
 
-  const renderMetadata = (metadata: Omit<ComponentMetadata, 'code' | 'componentId'>, level: number = 0) => {
-    return Object.entries(metadata).map(([key, value], index) => {
-      const isObject = value !== null && typeof value === 'object' && !Array.isArray(value);
-      const isArray = Array.isArray(value);
-      
-      return (
-        <div key={`${key}-${index}`} className="mb-2" style={{ paddingLeft: `${level * 12}px` }}>
-          <span className="">{key}:</span>{' '}
-          {isArray ? (
-            <span className='text-gray-500'>{value.join(', ')}</span>
-          ) : isObject ? (
-            <div className="ml-4 mt-1 pl-2 border-l-2 border-gray-300">
-              {renderMetadata(value, level + 1)}
-            </div>
-          ) : (
-            <span className='text-gray-500'>{String(value)}</span>
-          )}
-        </div>
-      );
-    });
-  };
+
 
   return (
     <div className="p-6 w-full mx-auto flex flex-col">
@@ -141,7 +146,7 @@ export const AddRagRecords = () => {
           Enter an array of component objects in JSON format. Each component should match the expected schema.
         </p>
       </div>
-      
+
       <div className="space-y-4 bg-white rounded-lg shadow p-6">
         <div className="space-y-2">
           <label htmlFor="json-input" className="block text-sm font-medium text-gray-700">
@@ -155,30 +160,28 @@ export const AddRagRecords = () => {
             className="w-full h-64 p-3 border border-gray-300 rounded-md font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
-        
+
         <div className="flex justify-between pt-2">
           <button
             type="button"
             onClick={parseJsonInput}
             disabled={!jsonInput.trim()}
-            className={`px-4 py-2 rounded-md text-white font-medium ${
-              !jsonInput.trim() 
-                ? 'bg-gray-400 cursor-not-allowed' 
+            className={`px-4 py-2 rounded-md text-white font-medium ${!jsonInput.trim()
+                ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-            }`}
+              }`}
           >
             Parse JSON
           </button>
-          
+
           <button
             type="button"
             onClick={handleAddToVectorStore}
-            disabled={components.length === 0 || isLoading}
-            className={`px-4 py-2 rounded-md text-white font-medium flex items-center ${
-              components.length === 0 || isLoading
+            disabled={components.length === 0 || validationErrors.length > 0 || isLoading}
+            className={`px-4 py-2 rounded-md text-white font-medium flex items-center ${components.length === 0 || validationErrors.length > 0 || isLoading
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2'
-            }`}
+              }`}
           >
             {isLoading ? (
               <>
@@ -192,6 +195,16 @@ export const AddRagRecords = () => {
           </button>
         </div>
         {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+        {validationErrors.length > 0 && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <h4 className="font-medium text-red-800 mb-2">Validation Errors:</h4>
+            <ul className="list-disc pl-5 space-y-1">
+              {validationErrors.map((err, index) => (
+                <li key={index} className="text-red-700 text-sm">{err}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="mt-8 flex-1 flex flex-col">
@@ -220,7 +233,7 @@ export const AddRagRecords = () => {
                     {components.map((component, index) => (
                       <tr key={component.componentId || `component-${index}`}>
                         <td className="px-6 py-4 max-w-lg">
-                          {renderMetadata({
+                          <RenderMetadata metadata={{
                             name: component.name,
                             sourceDesignSystem: component.sourceDesignSystem,
                             tags: component.tags,
@@ -228,16 +241,16 @@ export const AddRagRecords = () => {
                             category: component.category,
                             uxPattern: component.uxPattern,
                             visualStyle: component.visualStyle,
-                          })}
+                          }} />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <ErrorBoundary fallback={<div>Error rendering preview</div>}>
-                            <PreviewAreaItem 
-                              item={{ 
-                                id: parseInt(component.componentId, 10) || 0, 
-                                name: component.name, 
+                            <PreviewAreaItem
+                              item={{
+                                id: parseInt(component.componentId, 10) || 0,
+                                name: component.name,
                                 html: 'tailwind' in component.code ? component.code.tailwind || '' : component.code.html || ''
-                              }} 
+                              }}
                             />
                           </ErrorBoundary>
                         </td>
