@@ -5,6 +5,7 @@ import { checkpointer, uiVectorStore } from '../../config/constants';
 import { env } from '../../env';
 import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import { graphState, PlanSchema } from './graphState';
+import { parseXmlTagFormat } from './utils/parseDynamicKeyValueFormat';
 
 
 
@@ -82,13 +83,14 @@ The previous attempt was not successful.You MUST regenerate the component to fix
 
 
     const userPrompt = `
-# INSTRUCTION
-You are an expert React and Tailwind CSS developer. Your task is to analyze the user's request and the provided examples to generate a new UI component.
+
 # DETAILED PLAN
 ${state.plan.enhancedPrompt}
 
 # ORIGINAL USER REQUEST
 ${state.input.userMessage}
+
+${revisionInstruction || ''}
 
 # PREVIOUS COMPONENT (If available)
 ${state.output?.component || 'N/A'}
@@ -96,21 +98,54 @@ ${state.output?.component || 'N/A'}
 # EXAMPLES
 Here are ${similaritySearchWithScoreResults.length} relevant UI components for inspiration:
 ${similaritySearchWithScoreResults.map(([doc, score], index) => `## Example ${index + 1}\n${doc.pageContent}`).join('\n')}
-
 `;
+
     const componentSchema = z.object({
         name: z.string().describe("A concise, descriptive name for the component in PascalCase or Title Case (e.g., 'PrimaryButton', 'UserProfileCard')."),
         html: z.string().describe("A string containing the complete, self-contained HTML and Tailwind CSS code for the UI component. The code should be ready to be rendered directly in a browser."),
         message: z.string().describe("A brief, friendly confirmation message for the user who requested the component.")
     })
 
-    const { name, html, message } = await kim2Llm.withStructuredOutput(componentSchema).invoke([
+    const {content} = await kim2Llm.invoke([
         {
             role: 'system',
             content: `
-             # Rule
-             1. Response with a valid JSON object
-             2. Do not include any additional text or explanation start with { and end with }
+# ROLE
+You are an expert React and Tailwind CSS developer.You are a joyful and friendly developer. Your task is to analyze the user's request and the provided examples to generate a new UI component.
+
+# INSTRUCTION
+1. Analyze the user's request and the provided examples to generate a new UI component.
+2. The component should be a self-contained HTML and Tailwind CSS code.
+3. The component should be ready to be rendered directly in a browser.
+4. The component should be responsive and mobile-friendly.
+
+
+# Rule
+1. Your response MUST follow xml tag format with <key>value</key>.
+2. Do not include any additional text, explanations, or markdown code fences like \`\`\`.
+
+<name>
+A concise, descriptive name for the component in PascalCase (e.g., 'PrimaryButton').
+</name>
+
+<component>
+The complete, self-contained HTML and Tailwind CSS code for the UI component. do not include full html boilerplate.
+</component>
+
+<response>
+A brief, friendly confirmation message for the user who requested the component.
+</response>
+           
+           # Example
+           <name>
+           PrimaryButton
+           </name>
+           <component>
+           <button class="bg-blue-500 text-white px-4 py-2 rounded-md">Click me</button>
+           </component>
+           <response>
+           Here is the component you requested.
+           </response>
            `
         },
         {
@@ -119,11 +154,13 @@ ${similaritySearchWithScoreResults.map(([doc, score], index) => `## Example ${in
         }
     ]);
 
+    const { name, component, response } = parseXmlTagFormat(content.toString(), ['name', 'component', 'response']);
+
     return {
         output: {
             name,
-            component: html,
-            message,
+            component,
+            message:response,
             chatId: state.input.chatId
         },
     }
@@ -161,9 +198,9 @@ const validationNode = async (state: typeof graphState.State): Promise<Partial<t
     # TASK
     Evaluate the component
     `;
-    
 
-    const result = await validationLlm.withStructuredOutput(ValidationSchema).invoke([
+
+    const {content} = await validationLlm.invoke([
         {
             role: 'system',
             content: `
@@ -171,17 +208,31 @@ const validationNode = async (state: typeof graphState.State): Promise<Partial<t
 You are an expert senior front-end developer tasked with performing a rigorous code review on an AI-generated UI component.
 
            
-           ## Rule
-           1. Response with a valid JSON object
-           2. Do not include any additional text or explanation start with { and end with }
+           # INSTRUCTION
+           1. Evaluate the component
+           2. Provide a detailed, actionable feedback for the developer to improve the code.
+           3. Explain *why* it failed. If it's valid, provide a brief confirmation.
+           4. Provide a quality score from 1 (poor) to 10 (excellent).
+
+           # Rule
+           1. Your response MUST follow this exact format. Each key must be on its own line.
+           2. The value for each key starts on the line immediately following the key.
+           3. Do not include any additional text, explanations, or markdown code fences like \`\`\`.
+
+           <isValid>
+           A boolean (true or false) indicating whether the component is valid.
+           </isValid>
+           <feedback>
+           A detailed, actionable feedback for the developer to improve the code.
+           </feedback>
+           <score>
+           A quality score from 1 (poor) to 10 (excellent).
+           </score>
 
 
-           ## JSON Structure to return
-           {
-            isValid: boolean,
-            feedback: string,
-            score: number,
-           }
+
+
+           
            `
 
         },
@@ -191,18 +242,18 @@ You are an expert senior front-end developer tasked with performing a rigorous c
         }
     ]);
 
+    let { isValid, feedback, score } = parseXmlTagFormat(content.toString(), ['isValid', 'feedback', 'score']);
 
-
-    console.log(`--- VALIDATION SCORE: ${result.score}/10 ---`);
-    if (!result.isValid) {
-        console.log(`--- FEEDBACK: ${result.feedback} ---`);
+    console.log(`--- VALIDATION SCORE: ${score}/10 ---`);
+    if (isValid === 'false') {
+        console.log(`--- FEEDBACK: ${feedback} ---`);
     }
 
-    console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify({isValid, feedback, score}, null, 2));
 
     // Return the validation result to be merged into the state
     return {
-        validation: {...result, feedback: (state.validation?.feedback || '').concat('\n', result.feedback)}
+        validation: { isValid: isValid === 'true', feedback: (state.validation?.feedback || '').concat('\n', feedback), score: Number(score) }
     };
 }
 
@@ -216,7 +267,7 @@ const shouldContinue = (state: typeof graphState.State) => {
 };
 
 const aiMessageConsolidatorNode = async (state: typeof graphState.State): Promise<Partial<typeof graphState.State>> => {
-   
+
     return {
         messages: [
             new HumanMessage(state.input.userMessage),

@@ -39,7 +39,7 @@ let pendingRequests: Array<{
 async function refreshAuthToken(): Promise<string> {
   try {
     const apiResponse = await apiRequest<AuthResponse>(
-      () => axios.post("/api/auth/refresh", {}, { skipAuthRefresh: true, baseURL: import.meta.env.VITE_API_URL }),
+      () => axios.post("/api/auth/refresh", {}, { skipAuthRefresh: true, baseURL: import.meta.env.VITE_API_URL, withCredentials: true }),
       "Token refresh failed"
     );
     
