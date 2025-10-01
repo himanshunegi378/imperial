@@ -89,13 +89,21 @@ export const CreateView = () => {
   };
 
   return (
-    <>
-      <ChatArea
-        messages={messages}
-        onSendMessage={handleSendMessage}
-        isSending={isPending}
-      />
-      <PreviewArea htmlContent={htmlContent} isLoading={isPending} />
-    </>
+    <div className="col-span-2 h-full flex overflow-hidden">
+      {/* Chat Area - Left Side */}
+      <div className="w-1/2 border-r border-border">
+        <ChatArea
+          messages={messages}
+          onSendMessage={handleSendMessage}
+          isSending={isPending}
+          className="h-full"
+        />
+      </div>
+      
+      {/* Preview Area - Right Side */}
+      <div className="w-1/2">
+        <PreviewArea htmlContent={htmlContent} isLoading={isPending} className="h-full" />
+      </div>
+    </div>
   );
 };

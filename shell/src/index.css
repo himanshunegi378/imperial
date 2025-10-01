@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @import "tailwindcss";
 @import "tw-animate-css";
-/* 
----break---
-*/
+
 @custom-variant dark (&:is(.dark *));
 @plugin 'tailwind-scrollbar';
 /* 
@@ -200,4 +200,91 @@
   body {
     @apply bg-background text-foreground;
     }
+}
+
+/* 
+---break---
+*/
+
+/* Chat-specific improvements for better scrolling */
+@layer components {
+  /* Ensure chat container has proper height constraints */
+  .chat-container {
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile */
+    max-height: 100vh;
+    max-height: 100dvh;
+  }
+  
+  /* Improve scroll area performance */
+  .chat-scroll-area {
+    overflow-anchor: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+  
+  /* Ensure chat bubbles don't overflow */
+  .chat-bubble {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  /* Smooth animations for chat elements */
+  .chat-fade-in {
+    animation: chatFadeIn 0.3s ease-out;
+  }
+  
+  /* Custom scrollbar styling for chat */
+  .chat-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted)) transparent;
+  }
+  
+  .chat-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .chat-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .chat-scrollbar::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted));
+    border-radius: 3px;
+  }
+  
+  .chat-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground));
+  }
+}
+
+/* Chat animations */
+@keyframes chatFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ensure proper height inheritance for chat layouts */
+.chat-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0; /* Important for flexbox scrolling */
+}
+
+.chat-messages {
+  flex: 1;
+  min-height: 0; /* Important for flexbox scrolling */
+  overflow: hidden; /* Let ScrollArea handle overflow */
+}
+
+.chat-input-container {
+  flex-shrink: 0; /* Prevent input from shrinking */
 }

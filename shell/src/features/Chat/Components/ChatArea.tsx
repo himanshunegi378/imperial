@@ -1,44 +1,42 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Message } from "../types";
 
-// A simple SVG icon for the send button.
-const SendIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    width="24"
-    height="24"
-    fill="currentColor"
-    aria-hidden="true" // Decorative icon
-  >
-    <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-  </svg>
-);
-
-
+// Chat bubble component using shadcn/ui Card
 const ChatBubble = ({ sender, text }: Omit<Message, 'id'>) => {
   const isUser = sender === 'human';
 
   return (
-    // Animate new bubbles entering the chat for a smoother feel.
-    <div className={`flex animate-in fade-in slide-in-from-bottom-4 duration-500 ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div
-        className={`max-w-xl rounded-2xl px-4 py-2 font-sans shadow-soft-float
-          ${
-            isUser
-              // User bubble: A gentle gradient to feel personal and active.
-              ? 'bg-gradient-to-br from-pale-aqua to-muted-lavender text-dark-gray rounded-br-lg'
-              // AI bubble: Clean white to appear neutral, intelligent, and part of the background.
-              : 'bg-white text-dark-gray rounded-bl-lg'
-          }`}
+    <div className={`flex animate-in fade-in slide-in-from-bottom-4 duration-300 ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <Card 
+        className={`max-w-[80%] md:max-w-[70%] lg:max-w-[60%] chat-bubble ${
+          isUser 
+            ? 'bg-primary text-primary-foreground shadow-md' 
+            : 'bg-muted border-muted-foreground/20'
+        }`}
       >
-        <p className="leading-snug">{text}</p>
-      </div>
+        <CardContent className="p-3">
+          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+            {text}
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
-
-const ChatInput = ({ onSend, isDisabled }: { onSend: (message: string) => void, isDisabled: boolean }) => {
+// Chat input component with improved UX
+const ChatInput = ({ 
+  onSend, 
+  isDisabled 
+}: { 
+  onSend: (message: string) => void; 
+  isDisabled: boolean;
+}) => {
   const [inputValue, setInputValue] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -49,66 +47,179 @@ const ChatInput = ({ onSend, isDisabled }: { onSend: (message: string) => void, 
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e as any);
+    }
+  };
+
   return (
-    // The form container floats above the content with a blurred, translucent background.
-    <div className="p-4 bg-soft-white backdrop-blur-sm">
-       <form
-        onSubmit={handleSubmit}
-        // The input and button are grouped in a floating, rounded container.
-        className="flex items-center p-1 bg-white rounded-full shadow-soft-float"
-      >
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          disabled={isDisabled}
-          placeholder={isDisabled ? 'Imperial Intelligence is thinking...' : 'Ask anything...'}
-          // The input has no border or background itself, blending into the container.
-          // Focus state is a subtle ring within the container.
-          className="flex-grow w-full px-4 py-2 text-dark-gray bg-transparent placeholder:text-light-gray focus:outline-none"
-          aria-label="Chat input"
-        />
-        <button
-          type="submit"
-          disabled={isDisabled || !inputValue.trim()}
-          aria-label="Send message"
-          // Button states are handled carefully for a great user experience.
-          className={`flex items-center justify-center w-10 h-10 rounded-full text-white transition-all duration-300 ease-in-out
-            ${isDisabled || !inputValue.trim()
-              ? 'bg-muted-lavender cursor-not-allowed' // Disabled state
-              : 'bg-calming-blue hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-calming-blue/50 focus:ring-offset-2' // Active states
-            }`}
-        >
-          <SendIcon />
-        </button>
+    <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 chat-input-container">
+      <form onSubmit={handleSubmit} className="p-4">
+        <div className="flex items-center gap-2">
+          <Input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isDisabled}
+            placeholder={isDisabled ? 'Imperial Intelligence is thinking...' : 'Ask anything...'}
+            className="flex-1 min-h-[44px] text-base"
+            aria-label="Chat message input"
+            autoComplete="off"
+            autoFocus
+          />
+          <Button
+            type="submit"
+            disabled={isDisabled || !inputValue.trim()}
+            size="icon"
+            className="h-[44px] w-[44px] shrink-0"
+            aria-label="Send message"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
       </form>
     </div>
   );
 };
 
+// Main ChatArea component with proper scrolling
+export const ChatArea = ({ 
+  messages, 
+  onSendMessage, 
+  isSending, 
+  className 
+}: { 
+  messages: Message[]; 
+  onSendMessage: (message: string) => void; 
+  isSending: boolean; 
+  className?: string;
+}) => {
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [scrollTimeout, setScrollTimeout] = useState<NodeJS.Timeout | null>(null);
 
-export const ChatArea = ({ messages, onSendMessage, isSending, className }: { messages: Message[], onSendMessage: (message: string) => void, isSending: boolean, className?: string }) => {
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  // Check if user is at the bottom of the chat
+  const isAtBottom = useCallback(() => {
+    if (!viewportRef.current) return true;
+    
+    const { scrollTop, scrollHeight, clientHeight } = viewportRef.current;
+    const threshold = 50; // 50px threshold for "at bottom"
+    return scrollHeight - scrollTop - clientHeight < threshold;
+  }, []);
 
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (shouldAutoScroll && !isUserScrolling) {
+      const timeoutId = setTimeout(() => {
+        if (viewportRef.current) {
+          viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
+        }
+      }, 100); // Small delay to ensure DOM is updated
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages, shouldAutoScroll, isUserScrolling]);
+
+  // Handle scroll events to detect user scrolling
+  const handleScroll = useCallback(() => {
+    if (!isUserScrolling) {
+      setIsUserScrolling(true);
+      
+      // Clear existing timeout
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+      
+      // Reset user scrolling flag after a delay
+      const timeoutId = setTimeout(() => {
+        setIsUserScrolling(false);
+      }, 150);
+      
+      setScrollTimeout(timeoutId);
+    }
+  }, [isUserScrolling, scrollTimeout]);
+
+  // Update auto-scroll behavior based on scroll position
+  useEffect(() => {
+    if (viewportRef.current) {
+      const isBottom = isAtBottom();
+      setShouldAutoScroll(isBottom);
+    }
+  }, [isAtBottom]);
+
+  // Scroll to bottom function (can be called externally)
+  const scrollToBottom = useCallback(() => {
+    if (viewportRef.current) {
+      viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
+      setShouldAutoScroll(true);
+      setIsUserScrolling(false);
+    }
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+    };
+  }, [scrollTimeout]);
 
   return (
-    // Main container uses the base 'soft-white' background.
-    <div className={`flex flex-col bg-soft-white font-sans h-screen ${className}`}>
-      {/* Chat History */}
-      <div className="flex-grow p-4 space-y-4 overflow-y-auto md:p-6">
-        {messages.map((msg) => (
-          <ChatBubble key={msg.id} sender={msg.sender} text={msg.text} />
-        ))}
-        <div ref={chatEndRef} />
+    <div className={`chat-layout chat-container ${className}`}>
+      {/* Chat Messages Area with proper scrolling */}
+      <div className="chat-messages relative">
+        <ScrollArea 
+          ref={scrollAreaRef}
+          className="h-full w-full chat-scrollbar"
+          onScroll={handleScroll}
+        >
+          <div 
+            ref={viewportRef}
+            className="p-4 space-y-4 min-h-full chat-scroll-area"
+          >
+            {messages.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                <div className="text-center space-y-2">
+                  <div className="text-2xl">💬</div>
+                  <p className="text-sm">Start a conversation with Imperial Intelligence</p>
+                </div>
+              </div>
+            ) : (
+              messages.map((msg) => (
+                <ChatBubble 
+                  key={msg.id} 
+                  sender={msg.sender} 
+                  text={msg.text} 
+                />
+              ))
+            )}
+            
+            {/* Invisible element at bottom for proper scrolling */}
+            <div className="h-4" />
+          </div>
+        </ScrollArea>
+        
+        {/* Scroll to bottom button when not at bottom */}
+        {!shouldAutoScroll && messages.length > 0 && (
+          <Button
+            onClick={scrollToBottom}
+            size="sm"
+            className="absolute bottom-4 right-4 h-8 w-8 rounded-full shadow-lg z-10 hover:scale-105 transition-transform"
+            aria-label="Scroll to bottom"
+          >
+            <Send className="h-3 w-3 rotate-180" />
+          </Button>
+        )}
       </div>
 
-      {/* Message Input */}
-      <div className="mt-auto">
-        <ChatInput onSend={onSendMessage} isDisabled={isSending} />
-      </div>
+      {/* Chat Input */}
+      <ChatInput onSend={onSendMessage} isDisabled={isSending} />
     </div>
   );
 };

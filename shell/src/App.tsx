@@ -10,7 +10,7 @@ import {
 } from 'react-router-dom';
 // Chat types may still be needed in other components but not here.
 import { CreateView } from './views/CreateView';
-import { SideBar } from './features/Sidebar/Component/Sidebar';
+import { Sidebar } from './features/Sidebar/Component/Sidebar';
 import type { NavItem } from './features/Sidebar/types/NavItem';
 import useRequireAuth from './features/auth/useRequireAuth';
 
@@ -35,7 +35,7 @@ function ProtectedLayout() {
   const navItems: NavItem[] = [
     {
       id: 'create',
-      label: 'Create',
+      label: <span className="inline-flex items-center text-base">Create</span>,
       icon: '📝',
       onClick: () => navigate('/chat'),
       isActive: location.pathname === '/chat',
@@ -82,7 +82,7 @@ function ProtectedLayout() {
     }
   }
 
-  const sidebar = <SideBar
+  const sidebar = <Sidebar
     navItems={navItems}
     chatHistory={chatIds?.map((chatId) => ({ chatId: chatId.chatId, name: chatId.name, onClick: () => { navigate(`/chat/${chatId.chatId}`) } })) ?? []}
     onDeleteChat={handleDeleteChat}
@@ -132,7 +132,7 @@ function AppRoutes() {
 function App() {
   return (
     <Router>
-      <div className="grid grid-cols-[256px_1fr_1.5fr] h-screen w-screen select-none overflow-hidden divide-x-3 divide-solid divide-gray-200">
+      <div className="grid grid-cols-[256px_1fr_1.5fr] h-screen w-screen select-none overflow-hidden divide-x divide-solid divide-border">
         <AppRoutes />
       </div>
     </Router>

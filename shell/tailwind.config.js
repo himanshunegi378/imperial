@@ -22,10 +22,10 @@ module.exports = {
         'light-gray': '#9E9E9E',
       },
       fontFamily: {
-        // You'll want to choose a lightweight sans-serif font.
-        // Examples: 'Inter', 'Nunito', 'Lato', 'Roboto Light'.
-        // Make sure to import the font in your main CSS file or via Google Fonts.
-        sans: ['Inter', ...defaultTheme.fontFamily.sans], // Example: using Inter
+        // Modern, highly readable fonts
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
+        display: ['Inter', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         // Custom soft shadow for floating elements

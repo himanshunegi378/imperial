@@ -1,52 +1,135 @@
-// NavButton.tsx
-import React from 'react'; // Don't forget to import React
+import React from 'react';
+import { FiMoreVertical, FiTrash2, FiLogOut } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+import { useCurrentUser } from '../../auth/hooks/useCurrentUser';
+import { useAuth } from '../../auth/useAuth';
+import type { NavItem } from '../types/NavItem';
+
+// Import shadcn/ui components
+import { Button } from '../../../components/ui/button';
+import { ScrollArea } from '../../../components/ui/scroll-area';
+import { Separator } from '../../../components/ui/separator';
+import { Avatar, AvatarFallback } from '../../../components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../../../components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../components/ui/tooltip';
+import { Badge } from '../../../components/ui/badge';
 
 interface NavButtonProps {
   label: React.ReactNode;
-  icon: React.ReactNode; // Use React.ReactNode for icons
+  icon: React.ReactNode;
   onClick: () => void;
   isActive?: boolean;
   isDisabled?: boolean;
+  showLabel?: boolean;
 }
 
-const NavButton = ({ label, icon, onClick, isActive, isDisabled }: NavButtonProps) => (
-  <li>
-    <button
-      onClick={onClick}
-      disabled={isDisabled}
-      // Added `group` for nested hover effects if needed on icon/text
-      className={`
-        flex items-center w-full p-1.5 rounded-md ease-in-out
-        font-sans text-dark-gray 
-        disabled:opacity-50 disabled:cursor-not-allowed
-        ${isActive
-          ? 'bg-gradient-to-r shadow-inner from-pale-aqua to-muted-lavender text-calming-blue shadow-soft-float -ml-1 border-l-4 border-calming-blue'
-          : 'bg-soft-white hover:bg-muted-lavender/50 focus:bg-muted-lavender/70 -ml-1 border-l-4 border-transparent' // Subtler hover
-        }
-         active:shadow-inner // Active state for pressed feel
-      `}
-      aria-current={isActive ? 'page' : undefined} // A11y for active link
-    >
-      <span className={`mr-3 ${isActive ? 'text-calming-blue' : 'text-dark-gray group-hover:text-calming-blue'}`}>
-        {icon}
-      </span>
-      <span className="truncate">{label}</span>
-    </button>
-  </li>
+const NavButton = ({ label, icon, onClick, isActive, isDisabled, showLabel = true }: NavButtonProps) => (
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant={isActive ? "secondary" : "ghost"}
+          size="sm"
+          onClick={onClick}
+          disabled={isDisabled}
+          className={`
+            w-full justify-start h-10 px-3
+            ${isActive 
+              ? 'bg-secondary text-secondary-foreground shadow-sm border border-border' 
+              : 'hover:bg-accent hover:text-accent-foreground'
+            }
+            transition-all duration-200 ease-in-out
+            ${!showLabel ? 'px-3' : 'px-4'}
+          `}
+          aria-current={isActive ? 'page' : undefined}
+        >
+          <span className={`${isActive ? 'text-primary' : 'text-muted-foreground'} ${showLabel ? 'mr-3' : ''}`}>
+            {icon}
+          </span>
+          {showLabel && (
+            <span className="truncate font-medium font-sans text-sm tracking-wide">{label}</span>
+          )}
+        </Button>
+      </TooltipTrigger>
+             {!showLabel && (
+         <TooltipContent side="right" className="ml-2">
+           <p className="font-sans text-sm">{label}</p>
+         </TooltipContent>
+       )}
+    </Tooltip>
+  </TooltipProvider>
 );
 
-export default NavButton; // Export as default for easier import
+interface ChatHistoryItemProps {
+  chatId: string;
+  name: string;
+  onClick: (chatId: string) => void;
+  onDelete?: (chatId: string) => void;
+  isActive?: boolean;
+}
 
-// SideBar.tsx
+const ChatHistoryItem = ({ chatId, name, onClick, onDelete, isActive }: ChatHistoryItemProps) => (
+  <div className="group relative">
+    <Button
+      variant={isActive ? "secondary" : "ghost"}
+      size="sm"
+      onClick={() => onClick(chatId)}
+      className={`
+        w-full justify-between h-9 px-3
+        ${isActive 
+          ? 'bg-secondary text-secondary-foreground shadow-sm border border-border' 
+          : 'hover:bg-accent hover:text-accent-foreground'
+        }
+        transition-all duration-200 ease-in-out
+      `}
+    >
+      <span className="truncate text-left flex-1 mr-2 text-sm font-sans font-medium">{name}</span>
+      {onDelete && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <FiMoreVertical className="h-3 w-3" />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+                         <DropdownMenuItem
+               onClick={(e) => {
+                 e.stopPropagation();
+                 onDelete(chatId);
+               }}
+               className="text-destructive focus:text-destructive font-sans"
+             >
+               <FiTrash2 className="mr-2 h-4 w-4" />
+               Delete chat
+             </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </Button>
+  </div>
+);
 
-import { FiMoreVertical, FiTrash2, FiLogOut } from 'react-icons/fi';
-import { DropdownMenu } from '../../../shared/components/DropdownMenu';
-import type { NavItem } from '../types/NavItem';
-import { useCurrentUser } from '../../auth/hooks/useCurrentUser';
-import { useAuth } from '../../auth/useAuth';
-import { useNavigate } from 'react-router-dom';
+interface SidebarProps {
+  navItems: NavItem[];
+  className?: string;
+  chatHistory: { chatId: string; name: string; onClick: (chatId: string) => void }[];
+  onDeleteChat?: (chatId: string) => void;
+  collapsed?: boolean;
+}
 
-export const SideBar = ({ navItems, className, chatHistory, onDeleteChat }: { navItems: NavItem[], className?: string, chatHistory: { chatId: string, name: string, onClick: (chatId: string) => void }[], onDeleteChat?: (chatId: string) => void }) => {
+export const Sidebar = ({ 
+  navItems, 
+  className, 
+  chatHistory, 
+  onDeleteChat,
+  collapsed = false 
+}: SidebarProps) => {
   const navigate = useNavigate();
   const { data: user } = useCurrentUser();
   const { logout } = useAuth();
@@ -59,96 +142,130 @@ export const SideBar = ({ navItems, className, chatHistory, onDeleteChat }: { na
 
   return (
     <div className={`
-      bg-soft-white text-dark-gray flex flex-col px-4 shadow-soft-float
-      border-r-2 border-gray-200
-      
+      flex flex-col h-full bg-background border-r border-border
+      ${collapsed ? 'w-16' : 'w-64'}
+      transition-all duration-300 ease-in-out
       ${className}
     `}>
-      {/* Logo */}
-      <div className="mb-10 text-center">
-        <h1 className="text-4xl font-semibold text-calming-blue font-sans">
-          IMPERIAL
-        </h1>
+      {/* Header */}
+      <div className="flex h-16 items-center justify-center border-b border-border px-4">
+        <div className="flex items-center space-x-2">
+          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-sm font-display">I</span>
+          </div>
+          {!collapsed && (
+            <h1 className="text-xl font-semibold text-foreground font-display tracking-wide">
+              IMPERIAL
+            </h1>
+          )}
+        </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-col flex-grow">
-        <ul className="mb-6">
-          {navItems.map((item) => (
-            <NavButton
-              key={item.id}
-              label={item.label}
-              icon={item.icon}
-              isActive={item.isActive}
-              onClick={() => item.onClick(item.id)}
-              isDisabled={item.isDisabled}
-            />
-          ))}
-        </ul>
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full">
+          <div className="p-4 space-y-2">
+            {/* Main Navigation */}
+            <nav className="space-y-1">
+              {navItems.map((item) => (
+                <NavButton
+                  key={item.id}
+                  label={item.label}
+                  icon={item.icon}
+                  isActive={item.isActive}
+                  onClick={() => item.onClick(item.id)}
+                  isDisabled={item.isDisabled}
+                  showLabel={!collapsed}
+                />
+              ))}
+            </nav>
 
-        <div className="mb-2 px-2 text-sm font-medium text-gray-400 select-none">Chats</div>
-        <ul className="grow shrink-1 basis-0 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-          {chatHistory.map((item, index) => (
-            <li key={item.chatId + index} className="relative group">
-              <div 
-                onClick={() => item.onClick(item.chatId)}
-                className="flex items-center justify-between p-1.5 rounded-lg text-gray-800 hover:text-blue-700 hover:bg-blue-100 focus:bg-blue-200 focus:outline-none cursor-pointer"
-              >
-                <span
-                  className="flex-grow text-left overflow-hidden text-ellipsis whitespace-nowrap"
-                  title={item.name}
-                >
-                  {item.name}
-                </span>
-                <div className="">
-                  <DropdownMenu 
-                    trigger={<FiMoreVertical className="text-gray-500 group-hover:text-blue-700 " />}
-                    align="right"
-                    items={[
-                      {
-                        label: 'Delete',
-                        icon: <FiTrash2 className="text-red-500" />,
-                        onClick: () => onDeleteChat && onDeleteChat(item.chatId),
-                        className: 'text-red-500 hover:text-red-700'
-                      }
-                    ]}
-                  />
+            {/* Chat History Section */}
+            {chatHistory.length > 0 && (
+              <>
+                <Separator className="my-4" />
+                <div className="space-y-2">
+                  <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
+                    {!collapsed && (
+                                           <h3 className="text-sm font-medium text-muted-foreground font-sans tracking-wide">
+                       Recent Chats
+                     </h3>
+                    )}
+                    {!collapsed && (
+                                           <Badge variant="secondary" className="text-xs font-medium font-sans">
+                       {chatHistory.length}
+                     </Badge>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    {chatHistory.map((item, index) => (
+                      <ChatHistoryItem
+                        key={`${item.chatId}-${index}`}
+                        chatId={item.chatId}
+                        name={item.name}
+                        onClick={item.onClick}
+                        onDelete={onDeleteChat}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </nav>
+              </>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
 
-      {/* Account */}
-      <div className="border-t border-gray-200 py-2">
-        <DropdownMenu
-          align="right"
-          className='w-full'
-          trigger={
-            <button
-              className="
-                w-full py-2 px-2 flex items-center rounded-md
-                transition-all duration-200 ease-in-out
-                hover:bg-muted-lavender/50 focus:bg-muted-lavender/70
-                focus:outline-none
-              "
+      {/* User Account */}
+      <div className="border-t border-border p-4">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className={`
+                w-full justify-start h-10 px-3
+                ${collapsed ? 'px-2' : 'px-3'}
+              `}
             >
-              <div className="h-8 w-8 flex items-center justify-center rounded-full bg-calming-blue text-white uppercase mr-3">
-                {(user?.email?.charAt(0) || '?')}
-              </div>
-              <span className="truncate text-left flex-1">{user?.email || 'Account'}</span>
-            </button>
-          }
-          items={[
-            {
-              label: 'Logout',
-              icon: <FiLogOut className="text-red-500" />,
-              onClick: handleLogout,
-              className: 'text-red-500 hover:text-red-700',
-            },
-          ]}
-        />
+                             <Avatar className="h-6 w-6 mr-2">
+                 <AvatarFallback className="text-xs font-semibold font-sans">
+                   {user?.email?.charAt(0).toUpperCase() || 'U'}
+                 </AvatarFallback>
+               </Avatar>
+               {!collapsed && (
+                 <div className="flex-1 text-left">
+                   <p className="text-sm font-medium text-foreground truncate font-sans tracking-wide">
+                     {user?.email || 'Account'}
+                   </p>
+                   <p className="text-xs text-muted-foreground truncate font-sans font-normal">
+                     User
+                   </p>
+                 </div>
+               )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+                         <div className="flex items-center justify-start space-x-2 p-2">
+               <Avatar className="h-8 w-8">
+                                <AvatarFallback className="font-semibold font-sans">
+                 {user?.email?.charAt(0).toUpperCase() || 'U'}
+               </AvatarFallback>
+               </Avatar>
+               <div className="space-y-1">
+                 <p className="text-sm font-medium leading-none font-sans tracking-wide">
+                   {user?.email || 'Account'}
+                 </p>
+                 <p className="text-xs leading-none text-muted-foreground font-sans font-normal">
+                   User
+                 </p>
+               </div>
+             </div>
+            <DropdownMenuSeparator />
+                         <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive font-sans">
+               <FiLogOut className="mr-2 h-4 w-4" />
+               Log out
+             </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
