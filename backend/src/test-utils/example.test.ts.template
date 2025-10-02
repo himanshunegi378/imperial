@@ -1,0 +1,95 @@
+/**
+ * Example test template - rename to .test.ts to enable
+ * 
+ * This demonstrates how to use the test utilities:
+ * 1. Database testing with testDb
+ * 2. API endpoint testing with supertest
+ * 
+ * See backend/TESTING.md for comprehensive testing guide
+ */
+
+import request from 'supertest';
+import { createTestApp, getTestDb } from './index';
+
+describe('Example Test Suite', () => {
+  // Example 1: Testing with database
+  describe('Database Tests', () => {
+    it('should access test database', () => {
+      const db = getTestDb();
+      expect(db).toBeDefined();
+      // You can now use db to query/insert test data
+    });
+
+    // Example: Insert and query data
+    it('should insert and query data', async () => {
+      const db = getTestDb();
+      // Example using your schema:
+      // const result = await db.insert(Components).values({
+      //   userId: 'test-user',
+      //   name: 'Test Component',
+      //   html: '<div>Test</div>',
+      //   hideFromLibrary: false
+      // }).returning();
+      // expect(result).toHaveLength(1);
+    });
+  });
+
+  // Example 2: Testing API endpoints with supertest
+  describe('API Tests', () => {
+    const app = createTestApp();
+
+    it('should test an endpoint', async () => {
+      // Example GET request
+      const response = await request(app)
+        .get('/some-endpoint')
+        .expect(200);
+      
+      expect(response.body).toBeDefined();
+    });
+
+    it('should test POST endpoint with authentication', async () => {
+      // Example POST request with cookies
+      const response = await request(app)
+        .post('/some-endpoint')
+        .set('Cookie', ['sessionId=test-session'])
+        .send({ data: 'test' })
+        .expect(201);
+
+      expect(response.body).toHaveProperty('success');
+    });
+
+    it('should handle errors', async () => {
+      const response = await request(app)
+        .get('/non-existent-endpoint')
+        .expect(404);
+    });
+  });
+
+  // Example 3: Testing with both database and API
+  describe('Integration Tests', () => {
+    const app = createTestApp();
+
+    it('should create and retrieve data', async () => {
+      // First, insert data via API
+      const createResponse = await request(app)
+        .post('/some-endpoint')
+        .send({ name: 'Test Item' })
+        .expect(201);
+
+      const createdId = createResponse.body.id;
+
+      // Then, verify it exists in database
+      const db = getTestDb();
+      // const result = await db.select().from(SomeTable).where(eq(SomeTable.id, createdId));
+      // expect(result).toHaveLength(1);
+
+      // Finally, retrieve via API
+      const getResponse = await request(app)
+        .get(`/some-endpoint/${createdId}`)
+        .expect(200);
+
+      expect(getResponse.body).toHaveProperty('name', 'Test Item');
+    });
+  });
+});
+

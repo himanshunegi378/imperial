@@ -1,5 +1,5 @@
 import { checkpointer } from "../../config/constants";
-import { createChatHistory, deleteChatHistory, doesChatHistoryExist, getAllChatIdsAssociateWithUser, saveComponent, saveMessage } from "./chat.repository";
+import { createChatHistory, deleteChatHistory, doesChatHistoryExist, getAllChatIdsAssociateWithUser, saveComponent } from "./chat.repository";
 import { GraphStateType } from "./chat.type";
 import { ai } from "./uiGeneratorGraph"
 

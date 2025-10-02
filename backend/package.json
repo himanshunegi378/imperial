@@ -9,7 +9,10 @@
     "dev": "nodemon",
     "build": "tsc -b",
     "clean": "rm -rf dist",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "cross-env NODE_ENV=test jest",
+    "test:watch": "cross-env NODE_ENV=test jest --watch",
+    "test:coverage": "cross-env NODE_ENV=test jest --coverage"
   },
   "keywords": [],
   "author": "",
@@ -50,7 +53,13 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^5.0.3",
+    "@types/jest": "^30.0.0",
+    "@types/supertest": "^6.0.3",
+    "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.4",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.4",
     "typescript": "^5.8.3"
   }
 }

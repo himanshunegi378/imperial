@@ -1,4 +1,4 @@
-import { chatHistory, chatHistory, Components } from "../../schema";
+import { chatHistory, Components } from "../../schema";
 import { eq, inArray, desc, and } from "drizzle-orm";
 import { db } from '../../db'
 import { checkpointer } from "../../config/constants";
