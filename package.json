@@ -1,0 +1,25 @@
+{
+  "name": "imperial-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Imperial monorepo with backend and frontend",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "type-check": "turbo run type-check"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.5"
+  },
+  "workspaces": [
+    "backend",
+    "shell"
+  ],
+  "packageManager": "yarn@1.22.19",
+  "engines": {
+    "node": ">=18.0.0",
+    "yarn": ">=1.22.0"
+  }
+}
