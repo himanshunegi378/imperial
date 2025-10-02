@@ -1,3 +1,9 @@
+// Load environment variables from .env.tst for test environment
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.test' });
+
+
+
 /**
  * Test environment configuration
  * Sets up environment variables for testing

@@ -20,7 +20,7 @@ export class ChatController {
                 throw new AppError(ChatErrorDefinitions.INVALID_PAYLOAD, {});
             }
             const { userMessage, chatId } = validatedBody.data;
-            const { component, name, message, chatId: _chatId } = await this.chatService.chat({
+            const { component, name, message, chatId: _chatId, intentType, editInstructions } = await this.chatService.chat({
                 userId: req.user?.userId.toString() || '',  // Using empty string as fallback for type safety
                 chatId,
                 userMessage
@@ -29,7 +29,9 @@ export class ChatController {
                 chatId: _chatId,
                 component,
                 name,
-                message
+                message,
+                intentType,           // Include edit mode metadata
+                editInstructions      // Include edit instructions
             }));
         } catch (error) {
             next(error);

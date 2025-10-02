@@ -1,32 +1,46 @@
 import { Annotation, MessagesAnnotation } from "@langchain/langgraph"
-import z from "zod"
 
-// Define a schema for our new plan object
-export const PlanSchema = z.object({
-    features: z.array(z.string()).describe("A list of key functional elements or components required."),
-    designNotes: z.array(z.string()).describe("A list of stylistic instructions, animations, or design language interpretations (e.g., what '3D' means)."),
-    enhancedPrompt: z.string().describe("A rewritten, detailed prompt for the UI generation model, incorporating the identified features and design notes.")
-});
-
-
+/**
+ * Simplified Graph State Schema
+ * 
+ * Cleaned up after removing deconstruction and validation nodes.
+ * Now only contains essential fields for intent detection, generation, and edit mode.
+ */
 export const graphState = Annotation.Root({
+    // Input from user
     input: Annotation<{
         userId: string,
         chatId: string,
         userMessage: string
     }>,
+    
+    // Generated output
     output: Annotation<{
         name: string,
         component: string,
         message: string,
         chatId: string
     }>,
-    plan: Annotation<z.infer<typeof PlanSchema>>(),
-
-    validation: Annotation<{
-        isValid: boolean,
-        feedback: string,
-        score: number,
-    }>(),
+    
+    // Edit mode support fields
+    previousComponent: Annotation<string | null>({
+        reducer: (prev, next) => next ?? prev,
+        default: () => null
+    }),
+    
+    intentType: Annotation<'CREATE' | 'EDIT'>({
+        reducer: (prev, next) => next ?? prev,
+        default: () => 'CREATE'
+    }),
+    
+    editInstructions: Annotation<{
+        targetElements: string[];
+        reasoning: string;
+    } | null>({
+        reducer: (prev, next) => next ?? prev,
+        default: () => null
+    }),
+    
+    // Message history
     ...MessagesAnnotation.spec
 })
