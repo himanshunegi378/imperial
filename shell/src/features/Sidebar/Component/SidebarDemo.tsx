@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import type { NavItem } from '../types/NavItem';
 import { FiHome, FiMessageSquare, FiBookOpen, FiSearch, FiSettings, FiMenu, FiX } from 'react-icons/fi';

@@ -3,7 +3,7 @@ import { getToken, saveToken, removeToken } from "./tokenStorage";
 import { apiRequest } from "../../../shared/utils/apiReuest";
 import type { AuthResponse } from "../types";
 import { createBrowserHistory } from "history";
-import { isErrorResponse, isSuccessResponse } from "../../../shared/types/response.types";
+import { isErrorResponse } from "../../../shared/types/response.types";
 import axios from "axios";
 // Only used for type declarations - no values imported
 
@@ -44,7 +44,6 @@ async function refreshAuthToken(): Promise<string> {
     );
     
     if (isErrorResponse(apiResponse)) {
-      const {  success, error:{code}} = apiResponse
       throw new Error(apiResponse.error.message || "Token refresh failed");
     }
     
