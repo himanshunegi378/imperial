@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Message } from "../types";
+import { ProgressIndicator } from "./ProgressIndicator";
+import type { ChatStreamState } from "@/api-hooks/useChatStream";
 
 // Chat bubble component using shadcn/ui Card
 const ChatBubble = ({ sender, text }: Omit<Message, 'id'>) => {
@@ -90,11 +92,13 @@ export const ChatArea = ({
   messages, 
   onSendMessage, 
   isSending, 
+  streamState,
   className 
 }: { 
   messages: Message[]; 
   onSendMessage: (message: string) => void; 
-  isSending: boolean; 
+  isSending: boolean;
+  streamState?: ChatStreamState;
   className?: string;
 }) => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -191,13 +195,22 @@ export const ChatArea = ({
                 </div>
               </div>
             ) : (
-              messages.map((msg) => (
-                <ChatBubble 
-                  key={msg.id} 
-                  sender={msg.sender} 
-                  text={msg.text} 
-                />
-              ))
+              <>
+                {messages.map((msg) => (
+                  <ChatBubble 
+                    key={msg.id} 
+                    sender={msg.sender} 
+                    text={msg.text} 
+                  />
+                ))}
+                
+                {/* Show progress indicator when streaming */}
+                {streamState && streamState.status !== 'idle' && streamState.status !== 'complete' && (
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <ProgressIndicator state={streamState} />
+                  </div>
+                )}
+              </>
             )}
             
             {/* Invisible element at bottom for proper scrolling */}

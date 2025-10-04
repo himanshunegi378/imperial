@@ -505,6 +505,121 @@ describe('Chat Routes', () => {
     });
   });
 
+  describe('Idle Chat: Casual Conversation Handling', () => {
+    it('should detect IDLECHAT intent for casual conversation', async () => {
+      // Step 1: Create initial component
+      const createResponse = await request(app)
+        .post('/chat')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ userMessage: 'Create a blue button' })
+        .expect(200);
+
+      const chatId = createResponse.body.data.chatId;
+      expect(createResponse.body.data.intentType).toBe('CREATE');
+
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Step 2: Send casual conversation message
+      const idleResponse = await request(app)
+        .post('/chat')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ 
+          userMessage: 'Thanks, that looks great!',
+          chatId: chatId
+        })
+        .expect(200);
+
+      // Verify IDLECHAT mode was detected
+      expect(idleResponse.body.data.intentType).toBe('IDLECHAT');
+      
+      // Verify no component was generated (empty component)
+      expect(idleResponse.body.data.component).toBe('');
+      
+      // Verify a natural response was provided
+      expect(idleResponse.body.data.message).toBeDefined();
+      expect(idleResponse.body.data.message.length).toBeGreaterThan(0);
+      
+      // Verify the response is conversational (not technical)
+      expect(idleResponse.body.data.message.toLowerCase()).toMatch(/thank|welcome|glad|like/);
+    }, 60000);
+
+    it('should handle various idlechat patterns', async () => {
+      const testCases = [
+        { message: 'Hello!', expectedKeywords: ['hello', 'hi'] },
+        { message: 'Nice work!', expectedKeywords: ['thank', 'nice', 'glad'] },
+        { message: 'How does this work?', expectedKeywords: ['help', 'create', 'component'] },
+        { message: 'Perfect!', expectedKeywords: ['thank', 'glad', 'happy'] },
+        { message: 'I like it', expectedKeywords: ['thank', 'glad', 'like'] }
+      ];
+
+      for (const testCase of testCases) {
+        // Create component first
+        const createResponse = await request(app)
+          .post('/chat')
+          .set('Authorization', `Bearer ${testToken}`)
+          .send({ userMessage: 'Create a simple button' })
+          .expect(200);
+
+        const chatId = createResponse.body.data.chatId;
+
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // Test idle chat message
+        const idleResponse = await request(app)
+          .post('/chat')
+          .set('Authorization', `Bearer ${testToken}`)
+          .send({ 
+            userMessage: testCase.message,
+            chatId: chatId
+          })
+          .expect(200);
+
+        console.log(`Testing: "${testCase.message}" -> Intent: ${idleResponse.body.data.intentType}`);
+        
+        // Should detect IDLECHAT for all these messages
+        expect(idleResponse.body.data.intentType).toBe('IDLECHAT');
+        
+        // Verify no component generated
+        expect(idleResponse.body.data.component).toBe('');
+        
+        // Verify response contains expected keywords
+        const responseText = idleResponse.body.data.message.toLowerCase();
+        const hasExpectedKeyword = testCase.expectedKeywords.some(keyword => 
+          responseText.includes(keyword)
+        );
+        expect(hasExpectedKeyword).toBe(true);
+
+        // Clean up
+        await db.delete(Components).where(eq(Components.chatId, chatId));
+        await db.delete(chatHistory).where(eq(chatHistory.chatId, chatId));
+
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }, 120000);
+
+    it('should handle idlechat without previous component', async () => {
+      // Test idle chat without any previous component
+      const idleResponse = await request(app)
+        .post('/chat')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ userMessage: 'Hello there!' })
+        .expect(200);
+
+      // Should detect IDLECHAT even without previous component
+      expect(idleResponse.body.data.intentType).toBe('IDLECHAT');
+      
+      // Verify no component was generated
+      expect(idleResponse.body.data.component).toBe('');
+      
+      // Verify a friendly response was provided
+      expect(idleResponse.body.data.message).toBeDefined();
+      expect(idleResponse.body.data.message.length).toBeGreaterThan(0);
+      
+      // Should be a greeting response
+      expect(idleResponse.body.data.message.toLowerCase()).toMatch(/hello|hi|help|create/);
+    }, 60000);
+  });
+
   describe('Edit Mode: Incremental Component Modifications', () => {
     it('should detect EDIT intent and preserve component structure', async () => {
       // Step 1: Create initial component

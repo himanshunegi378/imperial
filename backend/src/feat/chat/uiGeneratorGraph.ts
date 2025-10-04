@@ -234,8 +234,23 @@ const intentDetectionNode = async (state: typeof graphState.State): Promise<Part
     const { userMessage } = state.input;
     const previousComponent = state.previousComponent;
     
-    // If no previous component exists, must be CREATE
+    // If no previous component exists, still run intent detection to catch IDLECHAT
+    // Only default to CREATE if the message is clearly a UI generation request
     if (!previousComponent) {
+        // Check if this is clearly an IDLECHAT message first
+        const isIdleChat = /^(hi|hello|thanks?|thank you|good|nice|great|awesome|perfect|how are you|what's your name|tell me about yourself|how does this work|what can you do)/i.test(userMessage.trim()) ||
+                          /^(you're welcome|no problem|sure|ok|okay|alright|yeah|yes|no)$/i.test(userMessage.trim()) ||
+                          userMessage.trim().length < 10 && !/create|make|build|generate|design/i.test(userMessage);
+        
+        if (isIdleChat) {
+            console.log("--- No previous component but message is clearly IDLECHAT ---");
+            return {
+                intentType: 'IDLECHAT',
+                previousComponent: null,
+                editInstructions: null
+            };
+        }
+        
         console.log("--- No previous component found, defaulting to CREATE mode ---");
         return {
             intentType: 'CREATE',
@@ -246,8 +261,8 @@ const intentDetectionNode = async (state: typeof graphState.State): Promise<Part
     
     // Use LLM to classify intent
     const IntentSchema = z.object({
-        intent: z.enum(['CREATE', 'EDIT']).describe(
-            "CREATE if user wants a completely new component, EDIT if modifying the existing one"
+        intent: z.enum(['CREATE', 'EDIT', 'IDLECHAT']).describe(
+            "CREATE if user wants a completely new component, EDIT if modifying the existing one, IDLECHAT if user is just chatting casually without UI requests"
         ),
         reasoning: z.string().describe("Brief explanation of why this classification was chosen"),
         targetElements: z.array(z.string()).optional().describe(
@@ -273,11 +288,21 @@ const intentDetectionNode = async (state: typeof graphState.State): Promise<Part
 - Different component types: "now make a navbar" (after making a card)
 - "instead" or "replace with" followed by different component
 
+# IDLECHAT Intent Indicators:
+- Casual conversation: "hi", "hello", "thanks", "thank you", "you're welcome"
+- Compliments/feedback: "nice", "good", "great", "awesome", "I like it", "looks good"
+- Questions about the system: "how does this work?", "what can you do?"
+- General chat: "how are you?", "what's your name?", "tell me about yourself"
+- Non-UI related topics: weather, personal questions, general conversation
+- Expressions of satisfaction: "perfect", "exactly what I wanted", "that's it"
+
 # Decision Rules:
-1. When previous component exists AND request is incremental → EDIT
-2. When request asks for completely different component → CREATE
-3. When in doubt with existing component → prefer EDIT (preserves user work)
-4. Explicit "new" or "create" keywords → CREATE`
+1. When user is just chatting or giving feedback → IDLECHAT
+2. When previous component exists AND request is incremental → EDIT
+3. When request asks for completely different component → CREATE
+4. When in doubt with existing component → prefer EDIT (preserves user work)
+5. Explicit "new" or "create" keywords → CREATE
+6. If no UI-related keywords and just casual conversation → IDLECHAT`
         },
         {
             role: 'user',
@@ -291,7 +316,7 @@ ${previousComponent.substring(0, 300)}...
 "${userMessage}"
 
 # TASK
-Classify the user's intent as CREATE or EDIT.`
+Classify the user's intent as CREATE, EDIT, or IDLECHAT.`
         }
     ]);
     
@@ -312,7 +337,79 @@ Classify the user's intent as CREATE or EDIT.`
 };
 
 /**
- * NODE 1: UI Generation (Simplified - Direct Generation)
+ * NODE 1: Idle Chat Response
+ * 
+ * Handles casual conversation when user is not requesting UI generation or edits.
+ * Responds naturally based on chat context without generating components.
+ * 
+ * @param state - Contains user message and chat context
+ * @returns Natural response message without component generation
+ */
+const idleChatNode = async (state: typeof graphState.State): Promise<Partial<typeof graphState.State>> => {
+    console.log('--- 💬 IDLECHAT MODE: Responding to casual conversation ---');
+    
+    const emit = state.sseEmitter;
+    
+    // Emit idle chat event
+    if (emit) {
+        emit('idlechat', { message: state.input.userMessage });
+    }
+
+    const { content } = await fastLlm.invoke([
+        {
+            role: 'system',
+            content: `You are a friendly UI component assistant. The user is having a casual conversation and NOT requesting any UI generation or modifications.
+
+# CONTEXT
+- User is chatting casually without UI requests
+- Previous component may exist in chat history
+- Respond naturally and helpfully
+- Keep responses conversational and brief
+- Acknowledge compliments positively
+- Be ready to help with UI tasks when they ask
+
+# RESPONSE GUIDELINES
+- Be friendly and conversational
+- Keep responses concise (1-2 sentences)
+- If they compliment the UI, acknowledge it positively
+- If they ask about your capabilities, briefly explain you help with UI components
+- If they're just saying hello, respond warmly
+- Don't generate any HTML or components in this mode
+
+# EXAMPLES
+User: "Thanks, that looks great!"
+Response: "You're welcome! I'm glad you like how it turned out. Feel free to ask if you need any adjustments or want to create something new!"
+
+User: "Hello!"
+Response: "Hi there! I'm here to help you create and modify UI components. What would you like to work on today?"
+
+User: "Nice work!"
+Response: "Thank you! I'm happy to help. Is there anything else you'd like to create or modify?"
+
+User: "How does this work?"
+Response: "I can help you create and edit UI components using HTML and Tailwind CSS. Just describe what you want, and I'll generate the code for you!"
+`
+        },
+        ...state.messages,
+        {
+            role: 'user',
+            content: state.input.userMessage
+        }
+    ]);
+
+    return {
+        output: {
+            ...state.output,
+            message: content.toString(),
+            chatId: state.input.chatId
+        },
+        // Keep previous component unchanged for potential future edits
+        previousComponent: state.previousComponent
+    };
+};
+
+/**
+ * NODE 2: UI Generation (Simplified - Direct Generation)
  * 
  * Generates HTML/Tailwind CSS code directly from user input.
  * Supports both CREATE and EDIT modes for incremental component refinement.
@@ -322,6 +419,7 @@ Classify the user's intent as CREATE or EDIT.`
  */
 const uiGenerationNode = async (state: typeof graphState.State): Promise<Partial<typeof graphState.State>> => {
     const isEditMode = state.intentType === 'EDIT';
+    const emit = state.sseEmitter;
     
     if (isEditMode) {
         console.log('--- ✏️ EDIT MODE: Modifying existing component ---');
@@ -336,6 +434,11 @@ const uiGenerationNode = async (state: typeof graphState.State): Promise<Partial
         isEditMode ? 3 : 10
     );
     console.log(`--- Found ${similarityResults.length} similar components ---`);
+    
+    // Emit generating event
+    if (emit) {
+        emit('generating', { mode: isEditMode ? 'EDIT' : 'CREATE' });
+    }
 
     // Build mode-specific context
     const contextInstructions = isEditMode ? `
@@ -397,12 +500,6 @@ ${(similarityResults || []).slice(0, isEditMode ? 3 : 5).map(([doc, score], inde
     `Example ${index + 1} (Score: ${score.toFixed(2)}):\n${doc.pageContent}`
 ).join('\n\n')}
 `;
-
-    const componentSchema = z.object({
-        name: z.string().describe("A concise, descriptive name for the component in PascalCase or Title Case (e.g., 'PrimaryButton', 'UserProfileCard')."),
-        html: z.string().describe("A string containing the complete, self-contained HTML and Tailwind CSS code for the UI component. The code should be ready to be rendered directly in a browser."),
-        message: z.string().describe("A brief, friendly confirmation message for the user who requested the component.")
-    });
 
     // Mode-specific system prompt
     const enhancedSystemPrompt = `
@@ -509,7 +606,7 @@ Here is the component you requested.
 }
 
 /**
- * NODE 2: Message Consolidation
+ * NODE 3: Message Consolidation
  * 
  * Finalizes conversation history by creating LangChain message objects.
  * This prepares the interaction for storage and display in the chat interface.
@@ -528,25 +625,42 @@ const aiMessageConsolidatorNode = async (state: typeof graphState.State): Promis
 }
 
 /**
- * WORKFLOW GRAPH DEFINITION - Simplified (No Deconstruction or Validation)
+ * WORKFLOW GRAPH DEFINITION - Enhanced with Conditional Routing
  * 
- * Flow: START → Intent Detection → Generate → Consolidate → END
+ * Flow: START → Intent Detection → [Conditional Routing] → Consolidate → END
  * 
- * Simplified workflow for faster component generation:
- * - Intent detection determines CREATE vs EDIT mode
- * - Direct generation without deconstruction phase
- * - No validation loop (trust the LLM output)
- * - Straight to message consolidation
+ * Enhanced workflow with conditional routing:
+ * - Intent detection determines CREATE, EDIT, or IDLECHAT mode
+ * - Conditional routing based on intent type
+ * - Direct generation for CREATE/EDIT, casual response for IDLECHAT
+ * - Straight to message consolidation for all paths
  */
 const workflow = new StateGraph(graphState)
-    // Simplified workflow with just 3 nodes
+    // Enhanced workflow with 4 nodes including idle chat
     .addNode('intentDetection', intentDetectionNode)
+    .addNode('idleChat', idleChatNode)
     .addNode('generateComponent', uiGenerationNode)
     .addNode('consolidateAiMessages', aiMessageConsolidatorNode)
 
-    // Simple linear flow
+    // Start with intent detection
     .addEdge(START, 'intentDetection')
-    .addEdge('intentDetection', 'generateComponent')
+    
+    // Conditional routing based on intent
+    .addConditionalEdges(
+        'intentDetection',
+        (state: typeof graphState.State) => {
+            console.log(`--- Routing to: ${state.intentType} ---`);
+            return state.intentType;
+        },
+        {
+            'IDLECHAT': 'idleChat',
+            'CREATE': 'generateComponent',
+            'EDIT': 'generateComponent'
+        }
+    )
+    
+    // Both paths lead to message consolidation
+    .addEdge('idleChat', 'consolidateAiMessages')
     .addEdge('generateComponent', 'consolidateAiMessages')
     .addEdge('consolidateAiMessages', END)
 

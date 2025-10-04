@@ -1,4 +1,5 @@
 import { Annotation, MessagesAnnotation } from "@langchain/langgraph"
+import { SSEEmitter } from "./sse.utils";
 
 /**
  * Simplified Graph State Schema
@@ -14,6 +15,12 @@ export const graphState = Annotation.Root({
         userMessage: string
     }>,
     
+    // SSE event emitter for real-time progress updates
+    sseEmitter: Annotation<SSEEmitter | null>({
+        reducer: (prev, next) => next ?? prev,
+        default: () => null
+    }),
+    
     // Generated output
     output: Annotation<{
         name: string,
@@ -28,7 +35,7 @@ export const graphState = Annotation.Root({
         default: () => null
     }),
     
-    intentType: Annotation<'CREATE' | 'EDIT'>({
+    intentType: Annotation<'CREATE' | 'EDIT' | 'IDLECHAT'>({
         reducer: (prev, next) => next ?? prev,
         default: () => 'CREATE'
     }),

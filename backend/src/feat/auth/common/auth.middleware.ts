@@ -17,17 +17,25 @@ declare global {
 
 /**
  * Middleware to authenticate JWT token
+ * Supports both Authorization header (Bearer token) and query parameter (for EventSource)
  */
 export const authenticateJWT = (req: Request, res: Response, next: NextFunction) => {
-  // Get the authorization header
+  let token: string | undefined;
+
+  // Try to get token from Authorization header first
   const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  }
   
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  // For GET requests (EventSource), also check query parameters
+  if (!token && req.method === 'GET' && req.query.token) {
+    token = req.query.token as string;
+  }
+  
+  if (!token) {
     return next(new AppError(AuthErrorDefinitions.UNAUTHORIZED, {}));
   }
-
-  // Extract the token
-  const token = authHeader.split(' ')[1];
   
   try {
     // Verify the token
