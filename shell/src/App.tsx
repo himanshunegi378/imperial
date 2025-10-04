@@ -114,7 +114,7 @@ function AppRoutes() {
       
       {/* Protected routes */}
       <Route element={<ProtectedLayout />}>
-        <Route path="/library" element={<div className="col-span-2 overflow-auto"><PreviewAreaContainer /></div>} />
+        <Route path="/library" element={<div className="col-span-2"><PreviewAreaContainer /></div>} />
         <Route path="/chat">
           <Route index element={<CreateView />} />
           <Route path=":chatId" element={<CreateView />} />

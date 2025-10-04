@@ -142,13 +142,13 @@ export const Sidebar = ({
 
   return (
     <div className={`
-      flex flex-col h-full bg-background border-r border-border
+      flex flex-col h-screen bg-background border-r border-border
       ${collapsed ? 'w-16' : 'w-64'}
       transition-all duration-300 ease-in-out
       ${className}
     `}>
       {/* Header */}
-      <div className="flex h-16 items-center justify-center border-b border-border px-4">
+      <div className="flex h-16 items-center justify-center border-b border-border px-4 flex-shrink-0">
         <div className="flex items-center space-x-2">
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
             <span className="text-primary-foreground font-bold text-sm font-display">I</span>
@@ -162,61 +162,61 @@ export const Sidebar = ({
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full">
-          <div className="p-4 space-y-2">
-            {/* Main Navigation */}
-            <nav className="space-y-1">
-              {navItems.map((item) => (
-                <NavButton
-                  key={item.id}
-                  label={item.label}
-                  icon={item.icon}
-                  isActive={item.isActive}
-                  onClick={() => item.onClick(item.id)}
-                  isDisabled={item.isDisabled}
-                  showLabel={!collapsed}
-                />
-              ))}
-            </nav>
+      <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
+        <div className="p-4 space-y-2 flex-shrink-0">
+          {/* Main Navigation */}
+          <nav className="space-y-1">
+            {navItems.map((item) => (
+              <NavButton
+                key={item.id}
+                label={item.label}
+                icon={item.icon}
+                isActive={item.isActive}
+                onClick={() => item.onClick(item.id)}
+                isDisabled={item.isDisabled}
+                showLabel={!collapsed}
+              />
+            ))}
+          </nav>
+        </div>
 
-            {/* Chat History Section */}
-            {chatHistory.length > 0 && (
-              <>
-                <Separator className="my-4" />
-                <div className="space-y-2">
-                  <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
-                    {!collapsed && (
-                                           <h3 className="text-sm font-medium text-muted-foreground font-sans tracking-wide">
-                       Recent Chats
-                     </h3>
-                    )}
-                    {!collapsed && (
-                                           <Badge variant="secondary" className="text-xs font-medium font-sans">
-                       {chatHistory.length}
-                     </Badge>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    {chatHistory.map((item, index) => (
-                      <ChatHistoryItem
-                        key={`${item.chatId}-${index}`}
-                        chatId={item.chatId}
-                        name={item.name}
-                        onClick={item.onClick}
-                        onDelete={onDeleteChat}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
+        {/* Chat History Section */}
+        {chatHistory.length > 0 && (
+          <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
+            <div className="px-4 flex-shrink-0">
+              <Separator className="mb-4" />
+              <div className={`flex items-center mb-2 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+                {!collapsed && (
+                  <h3 className="text-sm font-medium text-muted-foreground font-sans tracking-wide">
+                    Recent Chats
+                  </h3>
+                )}
+                {!collapsed && (
+                  <Badge variant="secondary" className="text-xs font-medium font-sans">
+                    {chatHistory.length}
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <ScrollArea className="flex-1 px-4">
+              <div className="space-y-1 pb-4">
+                {chatHistory.map((item, index) => (
+                  <ChatHistoryItem
+                    key={`${item.chatId}-${index}`}
+                    chatId={item.chatId}
+                    name={item.name}
+                    onClick={item.onClick}
+                    onDelete={onDeleteChat}
+                  />
+                ))}
+              </div>
+            </ScrollArea>
           </div>
-        </ScrollArea>
+        )}
       </div>
 
       {/* User Account */}
-      <div className="border-t border-border p-4">
+      <div className="border-t border-border p-4 flex-shrink-0">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button

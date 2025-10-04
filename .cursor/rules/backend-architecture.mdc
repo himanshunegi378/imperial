@@ -1,0 +1,105 @@
+---
+alwaysApply: true
+description: Backend architecture patterns and folder structure guide
+---
+
+# Imperial Backend Architecture
+
+## Overview
+The Imperial backend is a Node.js/TypeScript application using Express.js with a modular, feature-based architecture. It implements AI-powered chat functionality with UI generation capabilities using LangGraph.
+
+## Core Technologies
+- **Runtime**: Node.js with TypeScript
+- **Framework**: Express.js
+- **Database**: SQLite with Drizzle ORM
+- **AI**: LangChain/LangGraph for chat workflows
+- **Authentication**: JWT with refresh token rotation
+- **Testing**: Jest with Supertest
+- **Build**: TypeScript compiler with tsconfig
+
+## Folder Structure
+
+```
+backend/src/
+├── @types/                    # Global type definitions
+│   └── error.types.ts        # Error definition interfaces
+├── config/                   # Application configuration
+│   └── constants.ts          # App-wide constants and configs
+├── core/                     # Core utilities and shared logic
+│   └── utils/
+│       └── responseFormatter.ts # Standardized error handling
+├── feat/                     # Feature modules (main business logic)
+│   ├── auth/                 # Authentication & authorization
+│   ├── chat/                 # AI chat and UI generation
+│   ├── library/              # Component library management
+│   ├── rag/                  # Retrieval Augmented Generation
+│   └── vectorStore/          # Vector storage services
+├── shared/                   # Shared utilities across features
+│   └── repository/           # Common repository patterns
+├── services/                 # External service integrations
+│   ├── llm/                  # Language model services
+│   └── rag/                  # RAG service implementations
+├── test-utils/               # Testing utilities and setup
+├── db.ts                     # Database connection setup
+├── env.ts                    # Environment variable validation
+├── schema.ts                 # Database schema definitions
+└── server.ts                 # Application entry point
+```
+
+## Key Architectural Patterns
+
+### 1. Feature-Based Organization
+Each feature in `feat/` follows a consistent structure:
+- **Controllers**: Handle HTTP requests/responses
+- **Services**: Business logic implementation
+- **Routes**: Express route definitions
+- **Validation**: Request/response validation schemas
+- **Repositories**: Data access layer
+- **Types**: Feature-specific type definitions
+
+### 2. Modular Chat Architecture
+The chat feature uses a sophisticated LangGraph-based workflow:
+- **Graph Nodes**: Modular processing units (`nodes/` directory)
+- **Shared Services**: Common utilities for LLM and vector operations
+- **State Management**: Centralized graph state with checkpointing
+- **Real-time Updates**: SSE (Server-Sent Events) for progress streaming
+
+### 3. Error Handling
+Standardized error handling using:
+- Custom `AppError` class extending native Error
+- Structured error definitions with HTTP status codes
+- Global error middleware for consistent responses
+- Validation error formatting with field-specific details
+
+### 4. Database Patterns
+- **ORM**: Drizzle ORM with SQLite
+- **Migrations**: Version-controlled schema changes
+- **Type Safety**: Full TypeScript integration
+- **Testing**: Isolated test database with migration support
+
+## Entry Points
+- **Development**: `yarn dev` (nodemon with TypeScript)
+- **Production**: `yarn start` (compiled JavaScript)
+- **Testing**: `yarn test` (Jest with coverage)
+- **Database**: `yarn migrate` (run migrations)
+
+## Configuration Files
+- [package.json](mdc:backend/package.json) - Dependencies and scripts
+- [tsconfig.json](mdc:backend/tsconfig.json) - TypeScript configuration
+- [jest.config.js](mdc:backend/jest.config.js) - Testing setup
+- [drizzle.config.ts](mdc:backend/drizzle.config.ts) - Database configuration
+- [ecosystem.config.cjs](mdc:backend/ecosystem.config.cjs) - PM2 deployment config
+
+## Environment Variables
+Required environment variables (validated in [env.ts](mdc:backend/src/env.ts)):
+- `OPENAI_API_KEY` - OpenAI API access
+- `PORT` - Server port
+- `GROQ_API_KEY` - Groq API access
+- `JWT_SECRET` - JWT signing secret (optional, defaults for development)
+
+## Key Files to Understand
+- [server.ts](mdc:backend/src/server.ts) - Application bootstrap and middleware setup
+- [uiGeneratorGraph.ts](mdc:backend/src/feat/chat/uiGeneratorGraph.ts) - Main AI workflow orchestration
+- [graphState.ts](mdc:backend/src/feat/chat/graphState.ts) - Chat workflow state schema
+- [responseFormatter.ts](mdc:backend/src/core/utils/responseFormatter.ts) - Standardized error handling
+- [testApp.ts](mdc:backend/src/test-utils/testApp.ts) - Testing infrastructure setup

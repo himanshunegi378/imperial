@@ -1,0 +1,219 @@
+---
+alwaysApply: true
+---
+
+# Imperial Frontend Architecture
+
+## Overview
+The Imperial frontend (shell) is a modern React application built with TypeScript, Vite, and React Router. It provides an AI-powered UI generation interface with real-time streaming updates, authentication, and component library management.
+
+## Core Technologies
+- **Framework**: React 19 with TypeScript
+- **Build Tool**: Vite with gzip compression
+- **Router**: React Router v7
+- **State Management**: TanStack Query (React Query) for server state
+- **Styling**: Tailwind CSS v4 with custom design system
+- **UI Components**: Radix UI primitives + shadcn/ui
+- **Forms**: React Hook Form with Zod validation
+- **HTTP Client**: Axios with interceptors
+- **Real-time**: Server-Sent Events (SSE) via EventSource
+- **Authentication**: JWT with refresh token rotation
+
+## Folder Structure
+
+```
+shell/src/
+├── api-hooks/                 # API integration hooks
+│   ├── useChat.ts            # Standard chat mutation
+│   └── useChatStream.ts      # SSE-based streaming chat
+├── components/               # Shared UI components
+│   └── ui/                   # shadcn/ui components (46+ components)
+├── features/                 # Feature modules (main business logic)
+│   ├── auth/                 # Authentication & authorization
+│   ├── Chat/                 # Chat interface components
+│   ├── library/              # Component library management
+│   ├── rag/                  # RAG records management
+│   └── Sidebar/              # Navigation sidebar
+├── hooks/                    # Global custom hooks
+│   └── use-mobile.ts         # Responsive utilities
+├── shared/                   # Shared utilities across features
+│   ├── components/           # Shared business components
+│   ├── types/                # Shared type definitions
+│   └── utils/                # Shared utility functions
+├── views/                    # Top-level view components
+│   └── CreateView.tsx        # Main chat creation view
+├── App.tsx                   # Root component with routing
+├── main.tsx                  # Application entry point
+├── axiosInstance.ts          # Configured Axios instance
+└── index.css                 # Global styles & Tailwind imports
+```
+
+## Key Architectural Patterns
+
+### 1. Feature-Based Organization
+Each feature in `features/` follows a consistent structure:
+- **components/**: Feature-specific React components
+- **hooks/**: Custom hooks for data fetching and mutations
+- **types/**: TypeScript type definitions
+- **View/**: Top-level view components for routes
+- **utils/**: Feature-specific utility functions
+- **Provider/**: Context providers (e.g., AuthProvider)
+- **schemas.ts**: Zod validation schemas
+- **index.ts**: Public API exports
+
+### 2. Data Fetching with React Query
+All server state is managed through TanStack Query:
+- **Queries**: For GET requests (useGetChatIds, useCurrentUser)
+- **Mutations**: For POST/PUT/DELETE requests (useLogin, useChat)
+- **Query Client**: Configured in [main.tsx](mdc:shell/src/main.tsx)
+- **Error Handling**: Standardized through apiRequest utility
+
+Example pattern:
+```typescript
+export const useLogin = () => {
+  return useMutation({
+    mutationFn: async (credentials) => {
+      return await apiRequest<User>(
+        () => axiosInstance.post('/auth/login', credentials),
+        'Login failed'
+      );
+    }
+  });
+};
+```
+
+### 3. Real-time Streaming with SSE
+Chat functionality supports real-time updates via Server-Sent Events:
+- **Hook**: [useChatStream.ts](mdc:shell/src/api-hooks/useChatStream.ts)
+- **Events**: `started`, `generating`, `complete`, `error`, `heartbeat`
+- **State**: Progress tracking, status updates, error handling
+- **Authentication**: Token passed as query parameter (EventSource limitation)
+
+### 4. Routing Architecture
+Protected and public routes with nested layouts:
+- **Public Routes**: Login, Signup (no authentication required)
+- **Protected Routes**: All other routes (authentication required)
+- **Layout Components**: 
+  - `ProtectedLayout`: Includes sidebar, auth check
+  - `PublicLayout`: Simple wrapper for auth pages
+- **Dynamic Routes**: `/chat/:chatId` for chat sessions
+
+### 5. Authentication Flow
+JWT-based authentication with automatic token refresh:
+- **Storage**: Tokens stored in localStorage
+- **Interceptors**: Automatic token attachment and refresh
+- **Provider**: AuthProvider wraps entire application
+- **Protection**: useRequireAuth hook for route guards
+- **Files**:
+  - [AuthProvider.tsx](mdc:shell/src/features/auth/Provider/AuthProvider.tsx)
+  - [authInterceptor.ts](mdc:shell/src/features/auth/utils/authInterceptor.ts)
+  - [tokenStorage.ts](mdc:shell/src/features/auth/utils/tokenStorage.ts)
+
+### 6. Type-Safe API Communication
+Standardized response handling with TypeScript:
+- **Response Types**: `SuccessResponse<T>` | `ErrorResponse`
+- **Type Guards**: `isSuccessResponse()`, `isErrorResponse()`
+- **Error Handling**: Centralized through [apiReuest.ts](mdc:shell/src/shared/utils/apiReuest.ts)
+- **Validation**: Zod schemas for request/response validation
+
+### 7. UI Component System
+Built on Radix UI primitives with Tailwind styling:
+- **Component Library**: 46+ pre-built components in `components/ui/`
+- **Design System**: Custom color palette and typography
+- **Accessibility**: ARIA-compliant via Radix UI
+- **Customization**: class-variance-authority (cva) for variants
+- **Utilities**: cn() helper from [utils.ts](mdc:shell/src/lib/utils.ts)
+
+## Application Entry Points
+
+### Development Workflow
+- **Start Dev Server**: `pnpm dev` (Vite dev server with HMR)
+- **Type Check**: `pnpm type-check` (TypeScript validation)
+- **Lint**: `pnpm lint` (ESLint)
+- **Build**: `pnpm build` (TypeScript compilation + Vite build)
+- **Preview**: `pnpm preview` (Preview production build)
+
+### Main Entry Files
+1. [index.html](mdc:shell/index.html) - HTML template
+2. [main.tsx](mdc:shell/src/main.tsx) - React root with providers
+3. [App.tsx](mdc:shell/src/App.tsx) - Router and route definitions
+
+## Configuration Files
+
+### Build & Tooling
+- [package.json](mdc:shell/package.json) - Dependencies and scripts
+- [vite.config.ts](mdc:shell/vite.config.ts) - Vite configuration with path aliases
+- [tsconfig.json](mdc:shell/tsconfig.json) - TypeScript compiler options
+- [tsconfig.app.json](mdc:shell/tsconfig.app.json) - App-specific TS config
+- [eslint.config.js](mdc:shell/eslint.config.js) - ESLint rules
+
+### Styling
+- [tailwind.config.js](mdc:shell/tailwind.config.js) - Custom design tokens
+- [components.json](mdc:shell/components.json) - shadcn/ui configuration
+- [index.css](mdc:shell/src/index.css) - Global styles and Tailwind imports
+
+## Environment Variables
+Required environment variables (accessed via `import.meta.env`):
+- `VITE_API_URL` - Backend API base URL (e.g., `http://localhost:3000`)
+
+## Key Files to Understand
+
+### Core Application
+- [main.tsx](mdc:shell/src/main.tsx) - Application bootstrap with providers
+- [App.tsx](mdc:shell/src/App.tsx) - Routing and layout structure
+- [axiosInstance.ts](mdc:shell/src/axiosInstance.ts) - HTTP client configuration
+
+### Authentication
+- [AuthProvider.tsx](mdc:shell/src/features/auth/Provider/AuthProvider.tsx) - Auth context and state
+- [authInterceptor.ts](mdc:shell/src/features/auth/utils/authInterceptor.ts) - Token refresh logic
+- [useRequireAuth.ts](mdc:shell/src/features/auth/hooks/useRequireAuth.ts) - Route protection
+
+### API Communication
+- [useChatStream.ts](mdc:shell/src/api-hooks/useChatStream.ts) - SSE streaming implementation
+- [apiReuest.ts](mdc:shell/src/shared/utils/apiReuest.ts) - Standardized API request handler
+- [response.types.ts](mdc:shell/src/shared/types/response.types.ts) - API response types
+
+### Views & Features
+- [CreateView.tsx](mdc:shell/src/views/CreateView.tsx) - Main chat interface
+- [Sidebar.tsx](mdc:shell/src/features/Sidebar/Component/Sidebar.tsx) - Navigation sidebar
+
+## Design System
+
+### Color Palette
+Custom colors defined in Tailwind config:
+- **Primary**: soft-white, muted-lavender, pale-aqua
+- **Accent**: calming-blue, serene-green
+- **Text**: dark-gray, light-gray
+
+### Typography
+- **Sans**: Inter (primary UI font)
+- **Mono**: JetBrains Mono (code blocks)
+- **Display**: Inter (headings)
+
+## State Management Strategy
+
+### Server State (React Query)
+- All API data fetching and caching
+- Automatic refetching and invalidation
+- Optimistic updates for mutations
+
+### Local State (useState/useReducer)
+- Component-specific UI state
+- Form state (via React Hook Form)
+- Transient UI interactions
+
+### Global State (Context)
+- Authentication state (AuthContext)
+- No global UI state management library
+
+## Path Aliases
+Configured in [vite.config.ts](mdc:shell/vite.config.ts):
+- `@/*` → `src/*` (enables `import { X } from '@/components/...'`)
+
+## Code Style Conventions
+- **Components**: PascalCase with `.tsx` extension
+- **Hooks**: camelCase starting with `use`
+- **Types**: PascalCase with explicit interfaces
+- **Files**: PascalCase for components, camelCase for utilities
+- **Exports**: Named exports from feature index.ts files
+- **Props**: Explicit interface definitions with Props suffix

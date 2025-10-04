@@ -1,0 +1,428 @@
+---
+globs: backend/src/**/*.test.ts,backend/src/test-utils/**/*.ts
+description: Testing patterns and utilities for backend development
+---
+
+# Backend Testing Patterns
+
+## Testing Infrastructure
+
+The backend uses Jest with Supertest for comprehensive testing. All testing utilities are centralized in [test-utils/](mdc:backend/src/test-utils/) directory.
+
+### Test Setup Files
+- [setup.ts](mdc:backend/src/test-utils/setup.ts) - Global test setup and teardown
+- [testApp.ts](mdc:backend/src/test-utils/testApp.ts) - Express app configuration for testing
+- [testDb.ts](mdc:backend/src/test-utils/testDb.ts) - Test database management
+- [testEnv.ts](mdc:backend/src/test-utils/testEnv.ts) - Test environment configuration
+
+## Test Database Pattern
+
+Tests use an isolated SQLite database that gets migrated and cleaned between test runs:
+
+```typescript
+// Global setup runs migrations
+beforeAll(async () => {
+  const db = setupTestDb();
+  const migrationsFolder = path.join(process.cwd(), 'drizzle');
+  migrate(db, { migrationsFolder });
+});
+
+// Global teardown cleans up
+afterAll(async () => {
+  teardownTestDb();
+});
+```
+
+## Test App Configuration
+
+The test app mirrors the production Express configuration but with test-specific settings:
+
+```typescript
+export function createTestApp() {
+  const app = express();
+  
+  // Same middleware as production
+  app.use(cors({ origin: ['http://localhost:5173'] }));
+  app.use(express.json());
+  app.use(cookieParser());
+  
+  // Register all routes
+  app.use(authRoutes);
+  app.use(userRoutes);
+  app.use(chatRoutes);
+  app.use(libraryRoutes);
+  
+  // Error handling middleware
+  app.use(errorHandler);
+  
+  return app;
+}
+```
+
+## Controller Testing Pattern
+
+Test controllers by making HTTP requests and asserting responses:
+
+```typescript
+describe('FeatureController', () => {
+  beforeEach(async () => {
+    // Setup test data
+    await setupTestData();
+  });
+
+  describe('POST /api/feature', () => {
+    it('should create feature successfully', async () => {
+      const validData = {
+        name: 'Test Feature',
+        type: 'TYPE_A'
+      };
+
+      const response = await request(app)
+        .post('/api/feature')
+        .send(validData)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: expect.any(String),
+        data: expect.objectContaining({
+          id: expect.any(Number),
+          name: 'Test Feature'
+        })
+      });
+    });
+
+    it('should reject invalid data', async () => {
+      const invalidData = {
+        name: '', // Invalid empty name
+        type: 'INVALID_TYPE'
+      };
+
+      await request(app)
+        .post('/api/feature')
+        .send(invalidData)
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.success).toBe(false);
+          expect(res.body.error.code).toBe('INVALID_PAYLOAD');
+        });
+    });
+  });
+});
+```
+
+## Service Testing Pattern
+
+Test services in isolation by mocking dependencies:
+
+```typescript
+describe('FeatureService', () => {
+  let featureService: FeatureService;
+  let mockRepository: jest.Mocked<FeatureRepository>;
+  let mockExternalService: jest.Mocked<ExternalService>;
+
+  beforeEach(() => {
+    mockRepository = {
+      findById: jest.fn(),
+      save: jest.fn(),
+      delete: jest.fn()
+    } as any;
+
+    mockExternalService = {
+      process: jest.fn()
+    } as any;
+
+    featureService = new FeatureService(mockRepository, mockExternalService);
+  });
+
+  describe('processData', () => {
+    it('should process data successfully', async () => {
+      // Arrange
+      const inputData = { id: 1, value: 'test' };
+      const mockResult = { id: 1, processed: true };
+      
+      mockRepository.findById.mockResolvedValue(inputData);
+      mockExternalService.process.mockResolvedValue(mockResult);
+      mockRepository.save.mockResolvedValue(mockResult);
+
+      // Act
+      const result = await featureService.processData(inputData.id);
+
+      // Assert
+      expect(mockRepository.findById).toHaveBeenCalledWith(1);
+      expect(mockExternalService.process).toHaveBeenCalledWith(inputData);
+      expect(mockRepository.save).toHaveBeenCalledWith(mockResult);
+      expect(result).toEqual(mockResult);
+    });
+
+    it('should throw error when data not found', async () => {
+      mockRepository.findById.mockResolvedValue(null);
+
+      await expect(featureService.processData(999))
+        .rejects
+        .toThrow(AppError);
+    });
+  });
+});
+```
+
+## Repository Testing Pattern
+
+Test repositories with actual database operations:
+
+```typescript
+describe('FeatureRepository', () => {
+  beforeEach(async () => {
+    // Clean database before each test
+    await db.delete(featureTable);
+  });
+
+  describe('createFeature', () => {
+    it('should create feature successfully', async () => {
+      const featureData = {
+        name: 'Test Feature',
+        type: 'TYPE_A',
+        userId: 'user123'
+      };
+
+      const result = await createFeature(featureData);
+
+      expect(result).toMatchObject({
+        id: expect.any(Number),
+        ...featureData,
+        createdAt: expect.any(Date)
+      });
+
+      // Verify it was actually saved
+      const saved = await findFeatureById(result.id);
+      expect(saved).toEqual(result);
+    });
+  });
+
+  describe('findFeatureById', () => {
+    it('should return feature when found', async () => {
+      const feature = await createFeature(testFeatureData);
+      const found = await findFeatureById(feature.id);
+      
+      expect(found).toEqual(feature);
+    });
+
+    it('should return null when not found', async () => {
+      const found = await findFeatureById(999);
+      expect(found).toBeNull();
+    });
+  });
+});
+```
+
+## Authentication Testing Pattern
+
+Test authentication flows with token management:
+
+```typescript
+describe('Authentication Flow', () => {
+  let testUser: { id: number; email: string };
+  let accessToken: string;
+  let refreshToken: string;
+
+  beforeEach(async () => {
+    // Create test user
+    testUser = await createTestUser();
+  });
+
+  describe('POST /api/auth/login', () => {
+    it('should login successfully and return tokens', async () => {
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: testUser.email,
+          password: 'testpassword123'
+        })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.token).toBeDefined();
+      
+      // Store tokens for subsequent tests
+      accessToken = response.body.data.token;
+      refreshToken = response.headers['set-cookie'][0];
+    });
+  });
+
+  describe('Protected routes', () => {
+    it('should access protected route with valid token', async () => {
+      await request(app)
+        .get('/api/protected')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+    });
+
+    it('should reject access without token', async () => {
+      await request(app)
+        .get('/api/protected')
+        .expect(401);
+    });
+  });
+});
+```
+
+## Error Testing Pattern
+
+Test error handling and validation:
+
+```typescript
+describe('Error Handling', () => {
+  it('should return structured error for validation failure', async () => {
+    const response = await request(app)
+      .post('/api/feature')
+      .send({}) // Empty body should fail validation
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      success: false,
+      error: {
+        code: 'INVALID_PAYLOAD',
+        message: expect.any(String),
+        details: expect.any(Object)
+      }
+    });
+  });
+
+  it('should handle internal server errors', async () => {
+    // Mock service to throw error
+    jest.spyOn(featureService, 'processData')
+      .mockRejectedValue(new Error('Database connection failed'));
+
+    const response = await request(app)
+      .post('/api/feature')
+      .send(validData)
+      .expect(500);
+
+    expect(response.body.success).toBe(false);
+    expect(response.body.error.code).toBe('INTERNAL_SERVER_ERROR');
+  });
+});
+```
+
+## Integration Testing Pattern
+
+Test complete user flows:
+
+```typescript
+describe('Complete Feature Flow', () => {
+  it('should handle full user journey', async () => {
+    // 1. User registration
+    const signupResponse = await request(app)
+      .post('/api/auth/signup')
+      .send({
+        email: 'test@example.com',
+        password: 'password123'
+      })
+      .expect(200);
+
+    // 2. Login
+    const loginResponse = await request(app)
+      .post('/api/auth/login')
+      .send({
+        email: 'test@example.com',
+        password: 'password123'
+      })
+      .expect(200);
+
+    const token = loginResponse.body.data.token;
+
+    // 3. Create feature
+    const featureResponse = await request(app)
+      .post('/api/feature')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'Test Feature',
+        type: 'TYPE_A'
+      })
+      .expect(200);
+
+    const featureId = featureResponse.body.data.id;
+
+    // 4. Retrieve feature
+    await request(app)
+      .get(`/api/feature/${featureId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    // 5. Update feature
+    await request(app)
+      .put(`/api/feature/${featureId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'Updated Feature'
+      })
+      .expect(200);
+
+    // 6. Delete feature
+    await request(app)
+      .delete(`/api/feature/${featureId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+  });
+});
+```
+
+## Test Utilities
+
+### Helper Functions
+Create reusable test utilities:
+
+```typescript
+export const createTestUser = async (overrides = {}) => {
+  const userData = {
+    email: `test-${Date.now()}@example.com`,
+    password: 'testpassword123',
+    ...overrides
+  };
+  
+  const hashedPassword = await bcrypt.hash(userData.password, 10);
+  return await db.insert(usersTable).values({
+    ...userData,
+    password: hashedPassword
+  }).returning();
+};
+
+export const generateTestToken = (userId: number) => {
+  return jwt.sign({ userId }, process.env.JWT_SECRET || 'test-secret');
+};
+```
+
+## Running Tests
+
+```bash
+# Run all tests
+yarn test
+
+# Run specific test file
+yarn test --testPathPattern=auth.test.ts
+
+# Run tests in watch mode
+yarn test:watch
+
+# Run tests with coverage
+yarn test:coverage
+```
+
+## Test Coverage Requirements
+
+- **Controllers**: All endpoints and error paths
+- **Services**: Business logic and edge cases
+- **Repositories**: CRUD operations and queries
+- **Utilities**: All public functions
+- **Middleware**: Authentication and validation
+- **Error Handling**: All error scenarios
+
+## Key Testing Principles
+
+1. **Isolation**: Each test should be independent
+2. **Cleanup**: Reset state between tests
+3. **Realistic Data**: Use production-like test data
+4. **Error Cases**: Test both success and failure scenarios
+5. **Integration**: Test complete user flows
+6. **Performance**: Keep tests fast and efficient
+7. **Documentation**: Tests should serve as documentation

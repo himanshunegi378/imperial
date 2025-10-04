@@ -1,0 +1,356 @@
+---
+globs: backend/src/**/*schema*.ts,backend/drizzle/**/*.sql,backend/src/db.ts,backend/src/schema.ts
+description: Database schema and migration patterns for backend development
+---
+
+# Backend Database Patterns
+
+## Database Technology Stack
+- **ORM**: Drizzle ORM with full TypeScript support
+- **Database**: SQLite (better-sqlite3 driver)
+- **Migrations**: Drizzle Kit for schema versioning
+- **Type Safety**: Automatic TypeScript type generation
+
+## Schema Organization
+
+### Main Schema File
+All database tables are defined in [schema.ts](mdc:backend/src/schema.ts):
+
+```typescript
+import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
+
+export const Components = sqliteTable('components', {
+  id: integer({mode: 'number'}).primaryKey({autoIncrement: true}),
+  chatId: text(),
+  userId: text().notNull(),
+  name: text().notNull(),
+  html: text().notNull(),
+  hideFromLibrary: integer('hideFromLibrary', {mode:"boolean"}).notNull().default(0),
+});
+
+export const chatHistory = sqliteTable('chatHistory', {
+  id: integer({mode: 'number'}).primaryKey({autoIncrement: true}),
+  userId: text().notNull(),
+  chatId: text().notNull(),
+  message: text().notNull(),
+});
+```
+
+### Feature-Specific Schemas
+Individual features can define their own schema files:
+
+```typescript
+// feat/auth/common/auth.schema.ts
+import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
+
+export const users = sqliteTable('users', {
+  id: integer({mode: 'number'}).primaryKey({autoIncrement: true}),
+  email: text().notNull().unique(),
+  password: text().notNull(),
+  createdAt: integer({ mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+
+export const refreshTokens = sqliteTable('refreshTokens', {
+  id: integer({mode: 'number'}).primaryKey({autoIncrement: true}),
+  userId: integer({mode: 'number'}).notNull().references(() => users.id),
+  token: text().notNull().unique(),
+  expiresAt: integer({ mode: 'timestamp' }).notNull(),
+  createdAt: integer({ mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+});
+```
+
+## Database Connection Pattern
+
+Database connection is configured in [db.ts](mdc:backend/src/db.ts):
+
+```typescript
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import Database from "better-sqlite3";
+
+const sqlite = new Database("imperial.db");
+export const db = drizzle(sqlite);
+```
+
+## Migration Patterns
+
+### Creating Migrations
+Use Drizzle Kit to generate migrations from schema changes:
+
+```bash
+# Generate migration after schema changes
+yarn create-migration
+
+# Apply migrations
+yarn migrate
+```
+
+### Migration Files
+Migrations are stored in `drizzle/` directory:
+- `0000_peaceful_rictor.sql` - Initial schema
+- `0001_aromatic_tyrannus.sql` - Add users table
+- `0002_rich_clea.sql` - Add refresh tokens
+
+### Migration Structure
+```sql
+-- Create table
+CREATE TABLE `users` (
+  `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+  `email` text NOT NULL,
+  `password` text NOT NULL,
+  `createdAt` integer NOT NULL
+);
+
+-- Add unique constraint
+CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);
+```
+
+## Repository Patterns
+
+### Basic CRUD Operations
+```typescript
+import { db } from "../../db";
+import { users, type NewUser } from "../common/auth.schema";
+import { eq, and } from "drizzle-orm";
+
+export const createUser = async (userData: NewUser) => {
+  const result = await db.insert(users).values(userData).returning();
+  return result[0];
+};
+
+export const findUserByEmail = async (email: string) => {
+  const result = await db.select().from(users).where(eq(users.email, email));
+  return result[0] || null;
+};
+
+export const findUserById = async (id: number) => {
+  const result = await db.select().from(users).where(eq(users.id, id));
+  return result[0] || null;
+};
+
+export const updateUser = async (id: number, updates: Partial<NewUser>) => {
+  const result = await db.update(users)
+    .set(updates)
+    .where(eq(users.id, id))
+    .returning();
+  return result[0] || null;
+};
+
+export const deleteUser = async (id: number) => {
+  await db.delete(users).where(eq(users.id, id));
+};
+```
+
+### Complex Queries
+```typescript
+import { db } from "../../db";
+import { components, chatHistory, users } from "../../schema";
+import { eq, and, desc, count } from "drizzle-orm";
+
+export const getUserComponentsWithHistory = async (userId: string) => {
+  return await db
+    .select({
+      component: components,
+      historyCount: count(chatHistory.id)
+    })
+    .from(components)
+    .leftJoin(chatHistory, eq(components.chatId, chatHistory.chatId))
+    .where(eq(components.userId, userId))
+    .groupBy(components.id)
+    .orderBy(desc(components.id));
+};
+
+export const findComponentsByLibraryStatus = async (hideFromLibrary: boolean) => {
+  return await db
+    .select()
+    .from(components)
+    .where(eq(components.hideFromLibrary, hideFromLibrary))
+    .orderBy(desc(components.id));
+};
+```
+
+### Transaction Patterns
+```typescript
+export const createUserWithToken = async (userData: NewUser, tokenData: NewRefreshToken) => {
+  return await db.transaction(async (tx) => {
+    // Create user
+    const user = await tx.insert(users).values(userData).returning();
+    
+    // Create refresh token
+    const token = await tx.insert(refreshTokens).values({
+      ...tokenData,
+      userId: user[0].id
+    }).returning();
+    
+    return { user: user[0], token: token[0] };
+  });
+};
+```
+
+## Type Safety Patterns
+
+### Schema Type Generation
+Drizzle automatically generates TypeScript types from schema:
+
+```typescript
+// Import generated types
+import { users, type NewUser, type User } from "./auth.schema";
+
+// Use in functions
+const createUser = async (userData: NewUser): Promise<User> => {
+  const result = await db.insert(users).values(userData).returning();
+  return result[0];
+};
+```
+
+### Query Result Types
+```typescript
+import { InferSelectModel, InferInsertModel } from "drizzle-orm";
+
+// Generated types from schema
+export type User = InferSelectModel<typeof users>;
+export type NewUser = InferInsertModel<typeof users>;
+
+// Custom query result types
+export type UserWithTokenCount = {
+  user: User;
+  tokenCount: number;
+};
+```
+
+## Vector Store Integration
+
+The application uses LibSQL for vector storage with custom service wrapper:
+
+```typescript
+// feat/vectorStore/vectorStore.service.ts
+import { LibSQLVectorStore } from "@langchain/community/vectorstores/libsql";
+import { OpenAIEmbeddings } from "@langchain/openai";
+
+export class VectorStore<T extends Record<string, unknown>> {
+  private store: LibSQLVectorStore;
+  private client: Client;
+  
+  constructor({ storeName, metadataSchema, embeddings }: VectorStoreConfig) {
+    this.client = this.createClient(storeName);
+    this.store = this.createVectorStore({ storeName, client: this.client, embeddings });
+  }
+  
+  async addDocuments(documents: Document[], metadatas?: T[]) {
+    return await this.store.addDocuments(documents, metadatas);
+  }
+  
+  async similaritySearch(query: string, k = 4) {
+    return await this.store.similaritySearch(query, k);
+  }
+}
+```
+
+## Testing Database Patterns
+
+### Test Database Setup
+```typescript
+// test-utils/testDb.ts
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+
+let testDb: Database.Database | null = null;
+
+export const setupTestDb = () => {
+  testDb = new Database(":memory:"); // In-memory SQLite for tests
+  return drizzle(testDb);
+};
+
+export const teardownTestDb = () => {
+  if (testDb) {
+    testDb.close();
+    testDb = null;
+  }
+};
+```
+
+### Test Data Patterns
+```typescript
+// Test data factories
+export const createTestUser = async (overrides = {}): Promise<User> => {
+  const userData = {
+    email: `test-${Date.now()}@example.com`,
+    password: 'hashedpassword',
+    ...overrides
+  };
+  
+  return await createUser(userData);
+};
+
+export const createTestComponent = async (userId: string, overrides = {}): Promise<Component> => {
+  const componentData = {
+    userId,
+    chatId: `chat-${Date.now()}`,
+    name: 'Test Component',
+    html: '<div>Test HTML</div>',
+    hideFromLibrary: false,
+    ...overrides
+  };
+  
+  return await createComponent(componentData);
+};
+```
+
+## Configuration Files
+
+### Drizzle Configuration
+[drizzle.config.ts](mdc:backend/drizzle.config.ts):
+```typescript
+import type { Config } from "drizzle-kit";
+
+export default {
+  schema: "./src/schema.ts",
+  out: "./drizzle",
+  driver: "better-sqlite",
+  dbCredentials: {
+    url: "./imperial.db"
+  }
+} satisfies Config;
+```
+
+### Migration Script
+[migration.js](mdc:backend/migration.js):
+```javascript
+const { migrate } = require("drizzle-orm/better-sqlite3/migrator");
+const { drizzle } = require("drizzle-orm/better-sqlite3");
+const Database = require("better-sqlite3");
+
+const sqlite = new Database("imperial.db");
+const db = drizzle(sqlite);
+
+migrate(db, { migrationsFolder: "./drizzle" });
+```
+
+## Best Practices
+
+### Schema Design
+1. **Naming**: Use camelCase for columns, PascalCase for tables
+2. **Types**: Prefer specific types over generic ones
+3. **Constraints**: Add appropriate constraints (unique, not null, foreign keys)
+4. **Indexes**: Create indexes for frequently queried columns
+5. **Defaults**: Use meaningful default values
+
+### Query Optimization
+1. **Select Specific Fields**: Only select needed columns
+2. **Use Indexes**: Ensure queries use indexed columns
+3. **Limit Results**: Use LIMIT for large result sets
+4. **Avoid N+1**: Use joins instead of multiple queries
+5. **Transactions**: Use transactions for related operations
+
+### Migration Safety
+1. **Backup**: Always backup before migrations
+2. **Test**: Test migrations on staging first
+3. **Rollback**: Plan rollback strategies
+4. **Atomic**: Keep migrations atomic and reversible
+5. **Version**: Use semantic versioning for schema changes
+
+### Type Safety
+1. **Generated Types**: Use Drizzle's generated types
+2. **Validation**: Validate data before database operations
+3. **Inference**: Let TypeScript infer types where possible
+4. **Custom Types**: Create custom types for complex queries
+5. **Error Handling**: Handle type errors gracefully

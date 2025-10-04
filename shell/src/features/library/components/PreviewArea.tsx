@@ -95,7 +95,7 @@ export const PreviewArea = ({ htmlContentList, deleteComponents }: PreviewAreaPr
   }
 
   return (
-    <div className="h-full w-full overflow-y-auto bg-soft-white p-4 sm:p-6 md:p-8">
+    <div className="w-full bg-soft-white p-4 sm:p-6 md:p-8">
       <div className="mx-auto max-w-7xl space-y-12">
         {htmlContentList.map((item) => (
           <PreviewAreaItem key={item.id} item={item} deleteComponents={deleteComponents} />
