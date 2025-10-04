@@ -4,7 +4,7 @@ import { FaCopy, FaCheck } from 'react-icons/fa';
 // LoadingSpinner is shown when the generation is pending
 const LoadingSpinner = () => (
   <div
-    className="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary"
+    className="h-10 w-10 animate-spin rounded-full border-4 border-muted-lavender border-t-calming-blue"
     role="status"
     aria-label="Loading..."
   />
@@ -37,9 +37,9 @@ export const PreviewArea = ({ htmlContent, isLoading, className }: PreviewAreaPr
   }, [htmlContent]);
 
   return (
-    <div className={`relative bg-muted rounded-xl shadow-md overflow-hidden flex-shrink-0 ${className ?? ''}`}>
+    <div className={`relative bg-soft-white rounded-xl shadow-soft-float overflow-hidden ${className ?? ''}`}>
       {isLoading && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/50 backdrop-blur-sm">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-soft-white/50 backdrop-blur-sm">
           <LoadingSpinner />
         </div>
       )}
@@ -49,7 +49,7 @@ export const PreviewArea = ({ htmlContent, isLoading, className }: PreviewAreaPr
           onClick={handleCopy}
           disabled={isCopied}
           aria-label={isCopied ? 'Copied HTML' : 'Copy HTML'}
-          className={`cursor-pointer flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${isCopied ? 'bg-green-500/80 text-white' : 'bg-background/60 text-foreground backdrop-blur-sm hover:bg-background/90 shadow-md'}`}
+          className={`cursor-pointer flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${isCopied ? 'bg-serene-green/80 text-white' : 'bg-white/60 text-dark-gray backdrop-blur-sm hover:bg-white/90 shadow-soft-float'}`}
         >
           {isCopied ? <FaCheck /> : <FaCopy />}
           <span>{isCopied ? 'Copied!' : 'Copy'}</span>
@@ -59,7 +59,7 @@ export const PreviewArea = ({ htmlContent, isLoading, className }: PreviewAreaPr
       <iframe
         ref={iframeRef}
         title="AI Generated Preview"
-        className={`w-full h-full border-none transition-opacity duration-300 ${isLoading ? 'opacity-20' : 'opacity-100'}`}
+        className={`w-full h-screen border-none transition-opacity duration-300 ${isLoading ? 'opacity-20' : 'opacity-100'}`}
         sandbox="allow-scripts"
       />
     </div>
